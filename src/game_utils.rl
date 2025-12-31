@@ -56,11 +56,8 @@ fun default_get_current_player(Game g) -> Int:
     d.value = 1
     if can g.roll(d):
         return -1
-    if can g.roll_pair(d, d):
-        return -1
     if can g.reroll(d):
         return -1
     if can g.quantity(d):
         return -1
     return int(g.board.current_decision_maker)
-
