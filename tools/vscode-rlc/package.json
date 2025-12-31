@@ -1,0 +1,36 @@
+{
+  "name": "rlc-syntax",
+  "displayName": "Rulebook Language (RLC)",
+  "description": "Syntax highlighting for Rulebook Language (.rl) used in 4Hammer",
+  "version": "0.1.0",
+  "publisher": "local",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "rlc",
+        "aliases": [
+          "Rulebook Language",
+          "RLC",
+          "rl"
+        ],
+        "extensions": [
+          ".rl"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "rlc",
+        "scopeName": "source.rlc",
+        "path": "./syntaxes/rlc.tmLanguage.json"
+      }
+    ]
+  }
+}
