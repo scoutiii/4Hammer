@@ -21,7 +21,9 @@ SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 SHOOTER_UNIT_INDEX = 0
 TARGET_UNIT_INDEX = 1
 
-WEAPON_RE = re.compile(r"^select_weapon \{weapon_id: (\d+)\}$")
+WEAPON_RE = re.compile(r"select_weapon\s*\{\s*weapon_id:\s*(\d+)\s*\}")
+WEAPON_ID_FALLBACK_RE = re.compile(r"weapon_id\s*:\s*(\d+)")
+SANITY_CHECKED = False
 
 
 def find_rlc_compiler(explicit_path=None):
@@ -54,7 +56,9 @@ def build_action_weapon_id_map(program, actions):
     mapping = {}
     for idx, action in enumerate(actions):
         s = rlc_string_to_py(program.module.to_string(action)).strip()
-        match = WEAPON_RE.match(s)
+        match = WEAPON_RE.search(s)
+        if not match:
+            match = WEAPON_ID_FALLBACK_RE.search(s)
         mapping[idx] = int(match.group(1)) if match else None
     return mapping
 
@@ -123,21 +127,33 @@ def encode_state(state):
     )
 
 
-def encode_action(weapon, module):
+def rule_kind(module, name, fallback=None):
     kind = module.WeaponRuleKind
+    if hasattr(kind, name):
+        return getattr(kind, name)()
+    if fallback and hasattr(kind, fallback):
+        return getattr(kind, fallback)()
+    raise AttributeError(f"WeaponRuleKind missing {name} (fallback {fallback})")
 
-    flag_torrent = float(weapon.has_rule(kind.torrent()))
-    flag_sustained = float(weapon.has_rule(kind.sustained_hit()))
-    flag_lethal = float(weapon.has_rule(kind.letal_hits()))
-    flag_dev = float(weapon.has_rule(kind.devastating_wounds()))
-    flag_hazard = float(weapon.has_rule(kind.hazardous()))
-    flag_blast = float(weapon.has_rule(kind.blast()))
-    flag_melta = float(weapon.has_rule(kind.melta()))
-    flag_rapid = float(weapon.has_rule(kind.rapid_fire()))
-    flag_ignore_cover = float(weapon.has_rule(kind.ignore_cover()))
+
+def encode_action(weapon, module):
+    flag_torrent = float(weapon.has_rule(rule_kind(module, "torrent")))
+    flag_sustained = float(weapon.has_rule(rule_kind(module, "sustained_hit")))
+    flag_lethal = float(weapon.has_rule(rule_kind(module, "lethal_hits", "letal_hits")))
+    flag_dev = float(weapon.has_rule(rule_kind(module, "devastating_wounds")))
+    flag_hazard = float(weapon.has_rule(rule_kind(module, "hazardous")))
+    flag_blast = float(weapon.has_rule(rule_kind(module, "blast")))
+    flag_melta = float(weapon.has_rule(rule_kind(module, "melta")))
+    flag_rapid = float(weapon.has_rule(rule_kind(module, "rapid_fire")))
+    flag_ignore_cover = float(weapon.has_rule(rule_kind(module, "ignore_cover")))
 
     param = 0.0
-    for rk in [kind.rapid_fire(), kind.melta(), kind.sustained_hit(), kind.blast()]:
+    for rk in [
+        rule_kind(module, "rapid_fire"),
+        rule_kind(module, "melta"),
+        rule_kind(module, "sustained_hit"),
+        rule_kind(module, "blast"),
+    ]:
         val = weapon.get_rule_parameter(rk)
         if val != 0:
             param = float(val)
@@ -197,6 +213,25 @@ def is_weapon_state(state, module):
     return state.board.current_state.value == module.CurrentStateDescription.select_weapon().value
 
 
+def target_total_wounds(board):
+    target = board.units.get(TARGET_UNIT_INDEX).contents
+    total = 0.0
+    for i in range(target.models.size()):
+        total += float(target.models.get(i).contents.wounds_left())
+    return total
+
+
+def ensure_weapon_actions(action_indices):
+    global SANITY_CHECKED
+    if SANITY_CHECKED:
+        return
+    if len(action_indices) < 2:
+        raise RuntimeError(
+            f"Expected >=2 weapon actions at first weapon selection, found {len(action_indices)}"
+        )
+    SANITY_CHECKED = True
+
+
 @dataclass
 class Transition:
     state: np.ndarray
@@ -204,6 +239,7 @@ class Transition:
     action_index: int
     old_logprob: float
     value: float
+    next_value: float
     reward: float
     done: bool
 
@@ -241,10 +277,30 @@ class WeaponPolicy(nn.Module):
         value = self.value_mlp(hs).squeeze(-1)
         return logits, value
 
+    def value(self, state_tensor):
+        hs = self.state_mlp(state_tensor)
+        return self.value_mlp(hs).squeeze(-1)
+
+
+def advance_until_weapon_or_done(env, module, action_weapon_id, rng, last_target_wounds):
+    reward = 0.0
+    while not env.is_done_underling():
+        state = env.state.state
+        if is_weapon_state(state, module):
+            action_indices, _ = select_weapon_actions(env, state, action_weapon_id, module)
+            if action_indices:
+                break
+        auto_action = choose_auto_action(env, rng)
+        env.step(auto_action)
+        new_target_wounds = target_total_wounds(env.state.state.board)
+        reward += last_target_wounds - new_target_wounds
+        last_target_wounds = new_target_wounds
+    return reward, last_target_wounds
+
 
 def run_episode(env, policy, action_weapon_id, module, rng, train=True):
     env.reset()
-    last_score = env.total_score(0)
+    last_target_wounds = target_total_wounds(env.state.state.board)
     done = env.is_done_underling()
 
     transitions = []
@@ -257,6 +313,8 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
                 env, state, action_weapon_id, module
             )
             if action_indices:
+                ensure_weapon_actions(action_indices)
+
                 state_vec = encode_state(state)
                 feats = np.stack(action_feats, axis=0)
 
@@ -275,28 +333,27 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
                 step_reward = 0.0
 
                 env.step(action_idx)
-                new_score = env.total_score(0)
-                step_reward += new_score - last_score
-                last_score = new_score
+                new_target_wounds = target_total_wounds(env.state.state.board)
+                step_reward += last_target_wounds - new_target_wounds
+                last_target_wounds = new_target_wounds
 
-                while not env.is_done_underling():
-                    state = env.state.state
-                    if is_weapon_state(state, module):
-                        next_actions, _ = select_weapon_actions(
-                            env, state, action_weapon_id, module
-                        )
-                        if next_actions:
-                            break
-                    auto_action = choose_auto_action(env, rng)
-                    env.step(auto_action)
-                    new_score = env.total_score(0)
-                    step_reward += new_score - last_score
-                    last_score = new_score
+                auto_reward, last_target_wounds = advance_until_weapon_or_done(
+                    env, module, action_weapon_id, rng, last_target_wounds
+                )
+                step_reward += auto_reward
 
                 done = env.is_done_underling()
                 episode_reward += step_reward
 
                 if train:
+                    if done:
+                        next_value = 0.0
+                    else:
+                        next_state_vec = encode_state(env.state.state)
+                        with torch.no_grad():
+                            next_value = float(
+                                policy.value(torch.tensor(next_state_vec, dtype=torch.float32)).item()
+                            )
                     transitions.append(
                         Transition(
                             state=state_vec,
@@ -304,6 +361,7 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
                             action_index=int(chosen.item()),
                             old_logprob=float(logprob.item()),
                             value=float(value.item()),
+                            next_value=next_value,
                             reward=float(step_reward),
                             done=done,
                         )
@@ -312,24 +370,75 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
 
         auto_action = choose_auto_action(env, rng)
         env.step(auto_action)
-        new_score = env.total_score(0)
-        episode_reward += new_score - last_score
-        last_score = new_score
+        new_target_wounds = target_total_wounds(env.state.state.board)
+        episode_reward += last_target_wounds - new_target_wounds
+        last_target_wounds = new_target_wounds
         done = env.is_done_underling()
 
     return transitions, episode_reward
 
 
-def compute_gae(rewards, values, dones, gamma=0.99, lam=0.95):
+def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
+    env.reset()
+    last_target_wounds = target_total_wounds(env.state.state.board)
+    done = env.is_done_underling()
+
+    episode_reward = 0.0
+    weapon_counts = {}
+
+    while not done:
+        state = env.state.state
+        if is_weapon_state(state, module):
+            action_indices, action_feats = select_weapon_actions(
+                env, state, action_weapon_id, module
+            )
+            if action_indices:
+                ensure_weapon_actions(action_indices)
+
+                if mode == "random":
+                    chosen_idx = int(rng.integers(len(action_indices)))
+                else:
+                    state_vec = encode_state(state)
+                    feats = np.stack(action_feats, axis=0)
+                    with torch.no_grad():
+                        st = torch.tensor(state_vec, dtype=torch.float32)
+                        at = torch.tensor(feats, dtype=torch.float32)
+                        logits, _ = policy.action_logits(st, at)
+                        chosen_idx = int(torch.argmax(logits).item())
+
+                action_idx = action_indices[chosen_idx]
+                weapon_id = action_weapon_id.get(action_idx)
+                if weapon_id is not None:
+                    weapon_counts[weapon_id] = weapon_counts.get(weapon_id, 0) + 1
+
+                env.step(action_idx)
+                new_target_wounds = target_total_wounds(env.state.state.board)
+                episode_reward += last_target_wounds - new_target_wounds
+                last_target_wounds = new_target_wounds
+
+                auto_reward, last_target_wounds = advance_until_weapon_or_done(
+                    env, module, action_weapon_id, rng, last_target_wounds
+                )
+                episode_reward += auto_reward
+                done = env.is_done_underling()
+                continue
+
+        auto_action = choose_auto_action(env, rng)
+        env.step(auto_action)
+        new_target_wounds = target_total_wounds(env.state.state.board)
+        episode_reward += last_target_wounds - new_target_wounds
+        last_target_wounds = new_target_wounds
+        done = env.is_done_underling()
+
+    return episode_reward, weapon_counts
+
+
+def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
     advantages = np.zeros_like(rewards, dtype=np.float32)
     gae = 0.0
     for t in reversed(range(len(rewards))):
-        if dones[t]:
-            gae = 0.0
-            next_value = 0.0
-        else:
-            next_value = values[t + 1] if t + 1 < len(values) else 0.0
-        delta = rewards[t] + gamma * next_value - values[t]
+        mask = 0.0 if dones[t] else 1.0
+        delta = rewards[t] + gamma * next_values[t] * mask - values[t]
         gae = delta + gamma * lam * gae
         advantages[t] = gae
     returns = advantages + values
@@ -339,9 +448,10 @@ def compute_gae(rewards, values, dones, gamma=0.99, lam=0.95):
 def ppo_update(policy, optimizer, transitions, clip_eps=0.2, value_coef=0.5, entropy_coef=0.01, epochs=4, minibatch_size=256):
     rewards = np.array([t.reward for t in transitions], dtype=np.float32)
     values = np.array([t.value for t in transitions], dtype=np.float32)
+    next_values = np.array([t.next_value for t in transitions], dtype=np.float32)
     dones = np.array([t.done for t in transitions], dtype=np.bool_)
 
-    advantages, returns = compute_gae(rewards, values, dones)
+    advantages, returns = compute_gae(rewards, values, next_values, dones)
     advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
 
     indices = np.arange(len(transitions))
@@ -361,11 +471,12 @@ def ppo_update(policy, optimizer, transitions, clip_eps=0.2, value_coef=0.5, ent
                 logits, value = policy.action_logits(st, at)
                 dist = torch.distributions.Categorical(logits=logits)
 
-                action_tensor = torch.tensor(t.action_index)
+                action_tensor = torch.tensor(t.action_index, dtype=torch.long)
                 logprob = dist.log_prob(action_tensor)
                 entropy = dist.entropy()
 
-                ratio = torch.exp(logprob - torch.tensor(t.old_logprob))
+                old = torch.tensor(t.old_logprob, dtype=torch.float32)
+                ratio = torch.exp(logprob - old)
                 adv = torch.tensor(advantages[idx], dtype=torch.float32)
 
                 surr1 = ratio * adv
@@ -387,17 +498,25 @@ def ppo_update(policy, optimizer, transitions, clip_eps=0.2, value_coef=0.5, ent
             optimizer.step()
 
 
-def evaluate(policy, env, action_weapon_id, module, episodes=20, seed=0):
+def evaluate(policy, env, action_weapon_id, module, episodes=20, seed=0, mode="greedy"):
     rng = np.random.default_rng(seed)
-    policy.eval()
     rewards = []
+    weapon_counts = {}
+    if policy is not None:
+        policy.eval()
+
     for _ in range(episodes):
-        _, ep_reward = run_episode(
-            env, policy, action_weapon_id, module, rng, train=False
+        ep_reward, ep_counts = run_episode_eval(
+            env, policy, action_weapon_id, module, rng, mode=mode
         )
         rewards.append(ep_reward)
-    policy.train()
-    return float(np.mean(rewards))
+        for weapon_id, count in ep_counts.items():
+            weapon_counts[weapon_id] = weapon_counts.get(weapon_id, 0) + count
+
+    if policy is not None:
+        policy.train()
+
+    return float(np.mean(rewards)), float(np.std(rewards)), weapon_counts
 
 
 def set_seed(seed):
@@ -453,9 +572,36 @@ def main():
             raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
         data = torch.load(ckpt_path, map_location="cpu")
         policy.load_state_dict(data["model"])
-        avg_reward = evaluate(policy, env, action_weapon_id, program.module, args.eval_episodes, args.seed)
-        print(f"Eval avg reward: {avg_reward:.3f}")
+        mean_r, std_r, counts = evaluate(
+            policy,
+            env,
+            action_weapon_id,
+            program.module,
+            args.eval_episodes,
+            args.seed,
+            mode="greedy",
+        )
+        print(f"Eval greedy | mean {mean_r:.3f} | std {std_r:.3f} | weapon_counts {counts}")
         return
+
+    last_eval_greedy_mean, last_eval_greedy_std, last_eval_greedy_counts = evaluate(
+        policy,
+        env,
+        action_weapon_id,
+        program.module,
+        args.eval_episodes,
+        args.seed,
+        mode="greedy",
+    )
+    last_eval_random_mean, last_eval_random_std, last_eval_random_counts = evaluate(
+        None,
+        env,
+        action_weapon_id,
+        program.module,
+        args.eval_episodes,
+        args.seed + 1,
+        mode="random",
+    )
 
     rng = np.random.default_rng(args.seed)
     for update in range(1, args.updates + 1):
@@ -472,7 +618,38 @@ def main():
         ppo_update(policy, optimizer, transitions)
 
         avg_reward = float(np.mean(episode_rewards)) if episode_rewards else 0.0
-        print(f"Update {update:03d} | avg episode reward: {avg_reward:.3f}")
+        do_eval = update % args.save_every == 0 or update == args.updates
+        if do_eval:
+            last_eval_greedy_mean, last_eval_greedy_std, last_eval_greedy_counts = evaluate(
+                policy,
+                env,
+                action_weapon_id,
+                program.module,
+                args.eval_episodes,
+                args.seed + update,
+                mode="greedy",
+            )
+            last_eval_random_mean, last_eval_random_std, last_eval_random_counts = evaluate(
+                None,
+                env,
+                action_weapon_id,
+                program.module,
+                args.eval_episodes,
+                args.seed + update + 1,
+                mode="random",
+            )
+            print(
+                f"Eval greedy | mean {last_eval_greedy_mean:.3f} | std {last_eval_greedy_std:.3f} | weapon_counts {last_eval_greedy_counts}"
+            )
+            print(
+                f"Eval random | mean {last_eval_random_mean:.3f} | std {last_eval_random_std:.3f} | weapon_counts {last_eval_random_counts}"
+            )
+
+        print(
+            "Update {:03d} | avg_ep_reward {:.3f} | eval_greedy {:.3f} | eval_random {:.3f}".format(
+                update, avg_reward, last_eval_greedy_mean, last_eval_random_mean
+            )
+        )
 
         if update % args.save_every == 0 or update == args.updates:
             torch.save(
