@@ -24,6 +24,8 @@ TARGET_UNIT_INDEX = 1
 WEAPON_RE = re.compile(r"select_weapon\s*\{\s*weapon_id:\s*(\d+)\s*\}")
 WEAPON_ID_FALLBACK_RE = re.compile(r"weapon_id\s*:\s*(\d+)")
 SANITY_CHECKED = False
+DEBUG_STATE_PRINT_LIMIT = 10
+NO_DAMAGE_STEP_LIMIT = 200
 
 
 def find_rlc_compiler(explicit_path=None):
@@ -50,6 +52,13 @@ def rlc_string_to_py(sobj):
             val += 256
         chars.append(chr(val))
     return "".join(chars)
+
+
+def safe_to_string(module, obj):
+    try:
+        return rlc_string_to_py(module.to_string(obj))
+    except Exception:
+        return None
 
 
 def build_action_weapon_id_map(program, actions):
@@ -210,6 +219,10 @@ def choose_auto_action(env, rng):
 
 
 def is_weapon_state(state, module):
+    current_str = safe_to_string(module, state.board.current_state)
+    if current_str:
+        current_str = current_str.lower()
+        return ("weapon" in current_str) and ("select" in current_str)
     return state.board.current_state.value == module.CurrentStateDescription.select_weapon().value
 
 
@@ -219,6 +232,42 @@ def target_total_wounds(board):
     for i in range(target.models.size()):
         total += float(target.models.get(i).contents.wounds_left())
     return total
+
+
+def unit_total_wounds(unit):
+    total = 0.0
+    for i in range(unit.models.size()):
+        total += float(unit.models.get(i).contents.wounds_left())
+    return total
+
+
+def format_position(pos):
+    try:
+        return f"({int(pos.x.value)},{int(pos.y.value)})"
+    except Exception:
+        try:
+            return f"({float(pos.x)},{float(pos.y)})"
+        except Exception:
+            return "(unknown)"
+
+
+def print_unit_listing(board, module):
+    print("Unit listing after reset:")
+    for idx in range(board.units.size()):
+        unit = board.units.get(idx).contents
+        name = safe_to_string(module, unit.name)
+        name = name.strip() if name else "unknown"
+        model_count = unit.models.size()
+        total_wounds = unit_total_wounds(unit)
+        if model_count > 0:
+            model0 = unit.models.get(0).contents
+            pos = format_position(model0.position)
+        else:
+            pos = "(none)"
+        print(
+            f" unit {idx} | owned_by_player1 {bool(unit.owned_by_player1)} | "
+            f"name {name} | models {model_count} | total_wounds {total_wounds:.1f} | pos0 {pos}"
+        )
 
 
 def ensure_weapon_actions(action_indices):
@@ -282,7 +331,16 @@ class WeaponPolicy(nn.Module):
         return self.value_mlp(hs).squeeze(-1)
 
 
-def advance_until_weapon_or_done(env, module, action_weapon_id, rng, last_target_wounds):
+def step_and_measure(env, action_idx, last_target_wounds):
+    env.step(action_idx)
+    new_target_wounds = target_total_wounds(env.state.state.board)
+    delta = last_target_wounds - new_target_wounds
+    return delta, new_target_wounds
+
+
+def advance_until_weapon_or_done(
+    env, module, action_weapon_id, rng, last_target_wounds, step_count, damage_seen
+):
     reward = 0.0
     while not env.is_done_underling():
         state = env.state.state
@@ -291,17 +349,20 @@ def advance_until_weapon_or_done(env, module, action_weapon_id, rng, last_target
             if action_indices:
                 break
         auto_action = choose_auto_action(env, rng)
-        env.step(auto_action)
-        new_target_wounds = target_total_wounds(env.state.state.board)
-        reward += last_target_wounds - new_target_wounds
-        last_target_wounds = new_target_wounds
-    return reward, last_target_wounds
+        delta, last_target_wounds = step_and_measure(env, auto_action, last_target_wounds)
+        reward += delta
+        step_count += 1
+        if delta > 0:
+            damage_seen = True
+    return reward, last_target_wounds, step_count, damage_seen
 
 
 def run_episode(env, policy, action_weapon_id, module, rng, train=True):
     env.reset()
     last_target_wounds = target_total_wounds(env.state.state.board)
     done = env.is_done_underling()
+    step_count = 0
+    damage_seen = False
 
     transitions = []
     episode_reward = 0.0
@@ -332,13 +393,22 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
                 action_idx = action_indices[int(chosen.item())]
                 step_reward = 0.0
 
-                env.step(action_idx)
-                new_target_wounds = target_total_wounds(env.state.state.board)
-                step_reward += last_target_wounds - new_target_wounds
-                last_target_wounds = new_target_wounds
+                delta, last_target_wounds = step_and_measure(env, action_idx, last_target_wounds)
+                step_reward += delta
+                step_count += 1
+                if delta > 0:
+                    damage_seen = True
 
-                auto_reward, last_target_wounds = advance_until_weapon_or_done(
-                    env, module, action_weapon_id, rng, last_target_wounds
+                auto_reward, last_target_wounds, step_count, damage_seen = (
+                    advance_until_weapon_or_done(
+                        env,
+                        module,
+                        action_weapon_id,
+                        rng,
+                        last_target_wounds,
+                        step_count,
+                        damage_seen,
+                    )
                 )
                 step_reward += auto_reward
 
@@ -369,11 +439,15 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
                 continue
 
         auto_action = choose_auto_action(env, rng)
-        env.step(auto_action)
-        new_target_wounds = target_total_wounds(env.state.state.board)
-        episode_reward += last_target_wounds - new_target_wounds
-        last_target_wounds = new_target_wounds
+        delta, last_target_wounds = step_and_measure(env, auto_action, last_target_wounds)
+        episode_reward += delta
+        step_count += 1
+        if delta > 0:
+            damage_seen = True
         done = env.is_done_underling()
+
+    if step_count >= NO_DAMAGE_STEP_LIMIT and not damage_seen:
+        raise RuntimeError("No damage detected; likely scenario/range/state mismatch.")
 
     return transitions, episode_reward
 
@@ -382,6 +456,8 @@ def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
     env.reset()
     last_target_wounds = target_total_wounds(env.state.state.board)
     done = env.is_done_underling()
+    step_count = 0
+    damage_seen = False
 
     episode_reward = 0.0
     weapon_counts = {}
@@ -411,26 +487,131 @@ def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
                 if weapon_id is not None:
                     weapon_counts[weapon_id] = weapon_counts.get(weapon_id, 0) + 1
 
-                env.step(action_idx)
-                new_target_wounds = target_total_wounds(env.state.state.board)
-                episode_reward += last_target_wounds - new_target_wounds
-                last_target_wounds = new_target_wounds
+                delta, last_target_wounds = step_and_measure(env, action_idx, last_target_wounds)
+                episode_reward += delta
+                step_count += 1
+                if delta > 0:
+                    damage_seen = True
 
-                auto_reward, last_target_wounds = advance_until_weapon_or_done(
-                    env, module, action_weapon_id, rng, last_target_wounds
+                auto_reward, last_target_wounds, step_count, damage_seen = (
+                    advance_until_weapon_or_done(
+                        env,
+                        module,
+                        action_weapon_id,
+                        rng,
+                        last_target_wounds,
+                        step_count,
+                        damage_seen,
+                    )
                 )
                 episode_reward += auto_reward
                 done = env.is_done_underling()
                 continue
 
         auto_action = choose_auto_action(env, rng)
-        env.step(auto_action)
-        new_target_wounds = target_total_wounds(env.state.state.board)
-        episode_reward += last_target_wounds - new_target_wounds
-        last_target_wounds = new_target_wounds
+        delta, last_target_wounds = step_and_measure(env, auto_action, last_target_wounds)
+        episode_reward += delta
+        step_count += 1
+        if delta > 0:
+            damage_seen = True
         done = env.is_done_underling()
 
+    if step_count >= NO_DAMAGE_STEP_LIMIT and not damage_seen:
+        print("WARNING: No damage detected; likely scenario/range/state mismatch.")
+
     return episode_reward, weapon_counts
+
+
+def run_debug_episode(env, action_weapon_id, module, rng):
+    env.reset()
+    print([x for x in dir(module.CurrentStateDescription) if not x.startswith("_")])
+    print_unit_listing(env.state.state.board, module)
+
+    last_target_wounds = target_total_wounds(env.state.state.board)
+    done = env.is_done_underling()
+    step_count = 0
+    damage_seen = False
+
+    while not done:
+        state = env.state.state
+        board = state.board
+        mask = env.get_action_mask()
+        legal_indices = np.where(mask == 1)[0]
+
+        state_str = safe_to_string(module, board.current_state)
+        if state_str is None and step_count < DEBUG_STATE_PRINT_LIMIT:
+            fallback = safe_to_string(module, state)
+            if fallback:
+                state_str = f"(fallback_state) {fallback}"
+        if state_str is None:
+            state_str = "<unavailable>"
+
+        print(
+            f"\n[t={step_count}] current_state_value {board.current_state.value} | "
+            f"current_state_str {state_str}"
+        )
+        print(f"legal_actions {int(mask.sum())}")
+        actions = env.actions()
+        for idx in legal_indices[:DEBUG_STATE_PRINT_LIMIT]:
+            action_str = safe_to_string(module, actions[idx])
+            if action_str is None:
+                action_str = "<unavailable>"
+            print(f" action {int(idx)} | {action_str}")
+
+        if board.units.size() > SHOOTER_UNIT_INDEX:
+            shooter = board.units.get(SHOOTER_UNIT_INDEX).contents
+            if shooter.models.size() > 0:
+                shooter_pos = format_position(shooter.models.get(0).contents.position)
+            else:
+                shooter_pos = "(none)"
+            print(
+                f" shooter can_shoot {bool(shooter.can_shoot)} | "
+                f"has_shoot {bool(shooter.has_shoot)} | "
+                f"models {shooter.models.size()} | pos0 {shooter_pos}"
+            )
+        else:
+            print(" shooter <missing>")
+
+        if board.units.size() > TARGET_UNIT_INDEX:
+            target = board.units.get(TARGET_UNIT_INDEX).contents
+            if target.models.size() > 0:
+                target_pos = format_position(target.models.get(0).contents.position)
+            else:
+                target_pos = "(none)"
+            print(f" target models {target.models.size()} | pos0 {target_pos}")
+        else:
+            print(" target <missing>")
+
+        print(f" target_wounds_before {last_target_wounds:.1f}")
+
+        action_idx = None
+        if is_weapon_state(state, module):
+            action_indices, _ = select_weapon_actions(env, state, action_weapon_id, module)
+            if action_indices:
+                ensure_weapon_actions(action_indices)
+                chosen = int(rng.integers(len(action_indices)))
+                action_idx = action_indices[chosen]
+                weapon_id = action_weapon_id.get(action_idx)
+                print(f" chosen_weapon_action {action_idx} | weapon_id {weapon_id}")
+        if action_idx is None:
+            action_idx = choose_auto_action(env, rng)
+            print(f" chosen_action {action_idx}")
+
+        action_str = safe_to_string(module, actions[action_idx])
+        if action_str is None:
+            action_str = "<unavailable>"
+        print(f" action_str {action_str}")
+
+        delta, last_target_wounds = step_and_measure(env, action_idx, last_target_wounds)
+        if delta > 0:
+            damage_seen = True
+        print(f" target_wounds_after {last_target_wounds:.1f} | delta_wounds {delta:.1f}")
+
+        step_count += 1
+        done = env.is_done_underling()
+
+    if step_count >= NO_DAMAGE_STEP_LIMIT and not damage_seen:
+        print("WARNING: No damage detected; likely scenario/range/state mismatch.")
 
 
 def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
@@ -534,6 +715,7 @@ def main():
     parser.add_argument("--eval-episodes", type=int, default=20)
     parser.add_argument("--checkpoint", type=str, default="")
     parser.add_argument("--save-every", type=int, default=10)
+    parser.add_argument("--debug-episode", action="store_true")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -548,6 +730,11 @@ def main():
 
     env = SingleRLCEnvironment(program)
     action_weapon_id = build_action_weapon_id_map(program, env.actions())
+
+    if args.debug_episode:
+        rng = np.random.default_rng(args.seed)
+        run_debug_episode(env, action_weapon_id, program.module, rng)
+        return
 
     state_dim = len(encode_state(env.state.state))
     action_dim = len(

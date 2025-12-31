@@ -3,23 +3,6 @@ import game_utils
 
 const TARGET_MODELS = 5
 
-fun make_sp3_shooter() -> Unit:
-    let unit : Unit
-    unit.name = "SP3 Shooter"s
-
-    let model : Model
-    model.profile = Profile::intercessor_squad
-    model.position = make_board_position(0, 0)
-    model.suffered_wounds = 0
-    model.state = ModelState::normal
-
-    # Two distinct pistol profiles so only one weapon selection is needed.
-    model.weapons.append(Weapon::bolt_pistol)
-    model.weapons.append(Weapon::plasma_pistol_standard)
-
-    unit.models.append(model)
-    return unit
-
 @classes
 act play() -> Game:
     frm board : Board
@@ -34,15 +17,17 @@ act play() -> Game:
     board.players_faction[1] = Faction::strike_force_octavius
 
     # Shooter (player 0)
-    board.units.append(make_sp3_shooter())
+    board.units.append(make_infernus_squad())
     board.units[0].owned_by_player1 = false
     board.units[0].move_to(make_board_position(10, 10))
     board.units[0].arrange()
+    board.units[0].can_shoot = true
+    board.units[0].has_shoot = false
 
     # Target (player 1)
     board.units.append(make_infernus_squad())
     board.units[1].owned_by_player1 = true
-    board.units[1].move_to(make_board_position(20, 10))
+    board.units[1].move_to(make_board_position(12, 10))
     board.units[1].arrange()
 
     let source_id : UnitID
