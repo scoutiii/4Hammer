@@ -23,6 +23,7 @@ TARGET_UNIT_INDEX = 1
 
 WEAPON_RE = re.compile(r"select_weapon\s*\{\s*weapon_id:\s*(\d+)\s*\}")
 WEAPON_ID_FALLBACK_RE = re.compile(r"weapon_id\s*:\s*(\d+)")
+ALLOCATE_WOUND_RE = re.compile(r"allocate_wound", re.IGNORECASE)
 SANITY_CHECKED = False
 DEBUG_STATE_PRINT_LIMIT = 10
 NO_DAMAGE_STEP_LIMIT = 200
@@ -70,6 +71,15 @@ def build_action_weapon_id_map(program, actions):
             match = WEAPON_ID_FALLBACK_RE.search(s)
         mapping[idx] = int(match.group(1)) if match else None
     return mapping
+
+
+def build_allocate_action_indices(program, actions):
+    indices = []
+    for idx, action in enumerate(actions):
+        s = rlc_string_to_py(program.module.to_string(action))
+        if ALLOCATE_WOUND_RE.search(s):
+            indices.append(idx)
+    return indices
 
 
 def stat_mean(stat):
@@ -218,12 +228,12 @@ def choose_auto_action(env, rng):
     return int(rng.choice(legal_indices))
 
 
-def is_weapon_state(state, module):
-    current_str = safe_to_string(module, state.board.current_state)
-    if current_str:
-        current_str = current_str.lower()
-        return ("weapon" in current_str) and ("select" in current_str)
-    return state.board.current_state.value == module.CurrentStateDescription.select_weapon().value
+def is_weapon_state(env, weapon_action_indices):
+    mask = env.get_action_mask()
+    for idx in weapon_action_indices:
+        if idx < len(mask) and mask[idx] == 1:
+            return True
+    return False
 
 
 def target_total_wounds(board):
@@ -249,6 +259,16 @@ def format_position(pos):
             return f"({float(pos.x)},{float(pos.y)})"
         except Exception:
             return "(unknown)"
+
+
+def current_roll_result(board):
+    try:
+        return int(board.current_roll.result.value)
+    except Exception:
+        try:
+            return int(board.current_roll.result)
+        except Exception:
+            return None
 
 
 def print_unit_listing(board, module):
@@ -338,13 +358,86 @@ def step_and_measure(env, action_idx, last_target_wounds):
     return delta, new_target_wounds
 
 
+def get_env_current_player(env):
+    if hasattr(env, "get_current_player"):
+        try:
+            return env.get_current_player()
+        except Exception:
+            return None
+    return None
+
+
+def step_chance_nodes(
+    env,
+    rng,
+    weapon_action_indices,
+    allocate_action_indices,
+    last_target_wounds,
+    step_count,
+    damage_seen,
+):
+    reward = 0.0
+    current_player = get_env_current_player(env)
+    if current_player is not None:
+        while not env.is_done_underling() and current_player == -1:
+            mask = env.get_action_mask()
+            legal_indices = np.where(mask == 1)[0]
+            if len(legal_indices) == 0:
+                break
+            choice = int(rng.choice(legal_indices))
+            delta, last_target_wounds = step_and_measure(env, choice, last_target_wounds)
+            reward += delta
+            step_count += 1
+            if delta > 0:
+                damage_seen = True
+            current_player = get_env_current_player(env)
+        return reward, last_target_wounds, step_count, damage_seen
+
+    while not env.is_done_underling():
+        mask = env.get_action_mask()
+        legal_indices = np.where(mask == 1)[0]
+        if len(legal_indices) <= 1:
+            break
+        if any(mask[idx] == 1 for idx in weapon_action_indices if idx < len(mask)):
+            break
+        if any(mask[idx] == 1 for idx in allocate_action_indices if idx < len(mask)):
+            break
+        choice = int(rng.choice(legal_indices))
+        delta, last_target_wounds = step_and_measure(env, choice, last_target_wounds)
+        reward += delta
+        step_count += 1
+        if delta > 0:
+            damage_seen = True
+    return reward, last_target_wounds, step_count, damage_seen
+
+
 def advance_until_weapon_or_done(
-    env, module, action_weapon_id, rng, last_target_wounds, step_count, damage_seen
+    env,
+    module,
+    action_weapon_id,
+    weapon_action_indices,
+    allocate_action_indices,
+    rng,
+    last_target_wounds,
+    step_count,
+    damage_seen,
 ):
     reward = 0.0
     while not env.is_done_underling():
+        chance_reward, last_target_wounds, step_count, damage_seen = step_chance_nodes(
+            env,
+            rng,
+            weapon_action_indices,
+            allocate_action_indices,
+            last_target_wounds,
+            step_count,
+            damage_seen,
+        )
+        reward += chance_reward
+        if env.is_done_underling():
+            break
         state = env.state.state
-        if is_weapon_state(state, module):
+        if is_weapon_state(env, weapon_action_indices):
             action_indices, _ = select_weapon_actions(env, state, action_weapon_id, module)
             if action_indices:
                 break
@@ -357,7 +450,16 @@ def advance_until_weapon_or_done(
     return reward, last_target_wounds, step_count, damage_seen
 
 
-def run_episode(env, policy, action_weapon_id, module, rng, train=True):
+def run_episode(
+    env,
+    policy,
+    action_weapon_id,
+    weapon_action_indices,
+    allocate_action_indices,
+    module,
+    rng,
+    train=True,
+):
     env.reset()
     last_target_wounds = target_total_wounds(env.state.state.board)
     done = env.is_done_underling()
@@ -368,8 +470,22 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
     episode_reward = 0.0
 
     while not done:
+        chance_reward, last_target_wounds, step_count, damage_seen = step_chance_nodes(
+            env,
+            rng,
+            weapon_action_indices,
+            allocate_action_indices,
+            last_target_wounds,
+            step_count,
+            damage_seen,
+        )
+        episode_reward += chance_reward
+        done = env.is_done_underling()
+        if done:
+            break
+
         state = env.state.state
-        if is_weapon_state(state, module):
+        if is_weapon_state(env, weapon_action_indices):
             action_indices, action_feats = select_weapon_actions(
                 env, state, action_weapon_id, module
             )
@@ -399,16 +515,16 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
                 if delta > 0:
                     damage_seen = True
 
-                auto_reward, last_target_wounds, step_count, damage_seen = (
-                    advance_until_weapon_or_done(
-                        env,
-                        module,
-                        action_weapon_id,
-                        rng,
-                        last_target_wounds,
-                        step_count,
-                        damage_seen,
-                    )
+                auto_reward, last_target_wounds, step_count, damage_seen = advance_until_weapon_or_done(
+                    env,
+                    module,
+                    action_weapon_id,
+                    weapon_action_indices,
+                    allocate_action_indices,
+                    rng,
+                    last_target_wounds,
+                    step_count,
+                    damage_seen,
                 )
                 step_reward += auto_reward
 
@@ -452,7 +568,16 @@ def run_episode(env, policy, action_weapon_id, module, rng, train=True):
     return transitions, episode_reward
 
 
-def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
+def run_episode_eval(
+    env,
+    policy,
+    action_weapon_id,
+    weapon_action_indices,
+    allocate_action_indices,
+    module,
+    rng,
+    mode="greedy",
+):
     env.reset()
     last_target_wounds = target_total_wounds(env.state.state.board)
     done = env.is_done_underling()
@@ -463,8 +588,22 @@ def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
     weapon_counts = {}
 
     while not done:
+        chance_reward, last_target_wounds, step_count, damage_seen = step_chance_nodes(
+            env,
+            rng,
+            weapon_action_indices,
+            allocate_action_indices,
+            last_target_wounds,
+            step_count,
+            damage_seen,
+        )
+        episode_reward += chance_reward
+        done = env.is_done_underling()
+        if done:
+            break
+
         state = env.state.state
-        if is_weapon_state(state, module):
+        if is_weapon_state(env, weapon_action_indices):
             action_indices, action_feats = select_weapon_actions(
                 env, state, action_weapon_id, module
             )
@@ -493,16 +632,16 @@ def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
                 if delta > 0:
                     damage_seen = True
 
-                auto_reward, last_target_wounds, step_count, damage_seen = (
-                    advance_until_weapon_or_done(
-                        env,
-                        module,
-                        action_weapon_id,
-                        rng,
-                        last_target_wounds,
-                        step_count,
-                        damage_seen,
-                    )
+                auto_reward, last_target_wounds, step_count, damage_seen = advance_until_weapon_or_done(
+                    env,
+                    module,
+                    action_weapon_id,
+                    weapon_action_indices,
+                    allocate_action_indices,
+                    rng,
+                    last_target_wounds,
+                    step_count,
+                    damage_seen,
                 )
                 episode_reward += auto_reward
                 done = env.is_done_underling()
@@ -522,7 +661,14 @@ def run_episode_eval(env, policy, action_weapon_id, module, rng, mode="greedy"):
     return episode_reward, weapon_counts
 
 
-def run_debug_episode(env, action_weapon_id, module, rng):
+def run_debug_episode(
+    env,
+    action_weapon_id,
+    weapon_action_indices,
+    allocate_action_indices,
+    module,
+    rng,
+):
     env.reset()
     print([x for x in dir(module.CurrentStateDescription) if not x.startswith("_")])
     print_unit_listing(env.state.state.board, module)
@@ -531,6 +677,7 @@ def run_debug_episode(env, action_weapon_id, module, rng):
     done = env.is_done_underling()
     step_count = 0
     damage_seen = False
+    weapon_seen = False
 
     while not done:
         state = env.state.state
@@ -585,7 +732,8 @@ def run_debug_episode(env, action_weapon_id, module, rng):
         print(f" target_wounds_before {last_target_wounds:.1f}")
 
         action_idx = None
-        if is_weapon_state(state, module):
+        if is_weapon_state(env, weapon_action_indices):
+            weapon_seen = True
             action_indices, _ = select_weapon_actions(env, state, action_weapon_id, module)
             if action_indices:
                 ensure_weapon_actions(action_indices)
@@ -605,13 +753,27 @@ def run_debug_episode(env, action_weapon_id, module, rng):
         delta, last_target_wounds = step_and_measure(env, action_idx, last_target_wounds)
         if delta > 0:
             damage_seen = True
-        print(f" target_wounds_after {last_target_wounds:.1f} | delta_wounds {delta:.1f}")
+        post_board = env.state.state.board
+        post_state_str = safe_to_string(module, post_board.current_state)
+        if post_state_str is None:
+            post_state_str = "<unavailable>"
+        target_models = 0
+        if post_board.units.size() > TARGET_UNIT_INDEX:
+            target_models = post_board.units.get(TARGET_UNIT_INDEX).contents.models.size()
+        roll_val = current_roll_result(post_board)
+        roll_info = f" | current_roll {roll_val}" if roll_val is not None else ""
+        print(
+            f" current_state_after {post_state_str} | target_wounds_after {last_target_wounds:.1f} | "
+            f"target_models {target_models} | delta_wounds {delta:.1f}{roll_info}"
+        )
 
         step_count += 1
         done = env.is_done_underling()
 
     if step_count >= NO_DAMAGE_STEP_LIMIT and not damage_seen:
-        print("WARNING: No damage detected; likely scenario/range/state mismatch.")
+        raise RuntimeError("No damage detected; likely scenario/range/state mismatch.")
+    if not weapon_seen:
+        raise RuntimeError("No select_weapon decision detected in debug episode.")
 
 
 def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
@@ -679,7 +841,17 @@ def ppo_update(policy, optimizer, transitions, clip_eps=0.2, value_coef=0.5, ent
             optimizer.step()
 
 
-def evaluate(policy, env, action_weapon_id, module, episodes=20, seed=0, mode="greedy"):
+def evaluate(
+    policy,
+    env,
+    action_weapon_id,
+    weapon_action_indices,
+    allocate_action_indices,
+    module,
+    episodes=20,
+    seed=0,
+    mode="greedy",
+):
     rng = np.random.default_rng(seed)
     rewards = []
     weapon_counts = {}
@@ -688,7 +860,14 @@ def evaluate(policy, env, action_weapon_id, module, episodes=20, seed=0, mode="g
 
     for _ in range(episodes):
         ep_reward, ep_counts = run_episode_eval(
-            env, policy, action_weapon_id, module, rng, mode=mode
+            env,
+            policy,
+            action_weapon_id,
+            weapon_action_indices,
+            allocate_action_indices,
+            module,
+            rng,
+            mode=mode,
         )
         rewards.append(ep_reward)
         for weapon_id, count in ep_counts.items():
@@ -716,6 +895,7 @@ def main():
     parser.add_argument("--checkpoint", type=str, default="")
     parser.add_argument("--save-every", type=int, default=10)
     parser.add_argument("--debug-episode", action="store_true")
+    parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
     set_seed(args.seed)
@@ -729,11 +909,21 @@ def main():
     exit_on_invalid_env(program, forced_one_player=False, needs_score=True)
 
     env = SingleRLCEnvironment(program)
-    action_weapon_id = build_action_weapon_id_map(program, env.actions())
+    actions = env.actions()
+    action_weapon_id = build_action_weapon_id_map(program, actions)
+    weapon_action_indices = [idx for idx, wid in action_weapon_id.items() if wid is not None]
+    allocate_action_indices = build_allocate_action_indices(program, actions)
 
-    if args.debug_episode:
+    if args.debug_episode or args.debug:
         rng = np.random.default_rng(args.seed)
-        run_debug_episode(env, action_weapon_id, program.module, rng)
+        run_debug_episode(
+            env,
+            action_weapon_id,
+            weapon_action_indices,
+            allocate_action_indices,
+            program.module,
+            rng,
+        )
         return
 
     state_dim = len(encode_state(env.state.state))
@@ -763,6 +953,8 @@ def main():
             policy,
             env,
             action_weapon_id,
+            weapon_action_indices,
+            allocate_action_indices,
             program.module,
             args.eval_episodes,
             args.seed,
@@ -775,6 +967,8 @@ def main():
         policy,
         env,
         action_weapon_id,
+        weapon_action_indices,
+        allocate_action_indices,
         program.module,
         args.eval_episodes,
         args.seed,
@@ -784,6 +978,8 @@ def main():
         None,
         env,
         action_weapon_id,
+        weapon_action_indices,
+        allocate_action_indices,
         program.module,
         args.eval_episodes,
         args.seed + 1,
@@ -797,7 +993,14 @@ def main():
 
         while len(transitions) < args.rollout_steps:
             ep_transitions, ep_reward = run_episode(
-                env, policy, action_weapon_id, program.module, rng, train=True
+                env,
+                policy,
+                action_weapon_id,
+                weapon_action_indices,
+                allocate_action_indices,
+                program.module,
+                rng,
+                train=True,
             )
             transitions.extend(ep_transitions)
             episode_rewards.append(ep_reward)
@@ -811,6 +1014,8 @@ def main():
                 policy,
                 env,
                 action_weapon_id,
+                weapon_action_indices,
+                allocate_action_indices,
                 program.module,
                 args.eval_episodes,
                 args.seed + update,
@@ -820,6 +1025,8 @@ def main():
                 None,
                 env,
                 action_weapon_id,
+                weapon_action_indices,
+                allocate_action_indices,
                 program.module,
                 args.eval_episodes,
                 args.seed + update + 1,

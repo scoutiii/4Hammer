@@ -49,9 +49,8 @@ using RandomStatResult = LinearlyDistributedInt<0, 10>
 # of weapons, which sometime is written as 1D6 + 3
 act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollStat:
     frm result : RandomStatResult 
-
-    if stat is Int:
-        result = stat + fixed_extra.value
+    if stat is LinearlyDistributedInt<0, 20>:
+        result = stat.value + fixed_extra.value
         return
 
     if stat is Dice:
@@ -62,6 +61,7 @@ act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollSt
             dice.value <= max_quantity.value
         }
         result = dice.value + fixed_extra.value
+        return
 
 fun evaluate_random_stat(Stat stat) -> RollStat:
     let zero : StatModifier 
@@ -217,7 +217,12 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         board.current_state = CurrentStateDescription::save_roll
         subaction*(board) board.current_roll 
         ref target_model = target.models[id.get()]
-        let best_save = min(target_model.profile.save() + board.attack_info.source.penetration() + int(board.attack_info.penetration_bonus), target_model.profile.invuln_save())
+        let best_save = min(
+            target_model.profile.save()
+            - board.attack_info.source.penetration()
+            + int(board.attack_info.penetration_bonus),
+            target_model.profile.invuln_save()
+        )
         if board.current_roll.result >= best_save:
             continue
         board.current_state = CurrentStateDescription::damage_roll
@@ -1115,4 +1120,3 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
         act pick_vengeful_brethren()
         board.players_faction[int(current_player)] = make_vengeful_brethren(board.reserve_units, current_player)
-
