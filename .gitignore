@@ -1,4 +1,3 @@
-examples/__pycache__/*
-examples/checkpoints/*
+examples/__pycache__/
+examples/checkpoints/
 *.pt
-examples/checkpoints/sp3_stage0_ppo.pt

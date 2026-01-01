@@ -15,6 +15,9 @@ import torch.optim as optim
 import rlc
 from ml.env import SingleRLCEnvironment, exit_on_invalid_env
 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(DEVICE)
+
 SCENARIO_PATH = Path(__file__).with_name("sp3_stage0_weapon_choice.rl")
 SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 
@@ -458,6 +461,7 @@ def run_episode(
     allocate_action_indices,
     module,
     rng,
+    device,
     train=True,
 ):
     env.reset()
@@ -496,8 +500,8 @@ def run_episode(
                 feats = np.stack(action_feats, axis=0)
 
                 with torch.no_grad():
-                    st = torch.tensor(state_vec, dtype=torch.float32)
-                    at = torch.tensor(feats, dtype=torch.float32)
+                    st = torch.tensor(state_vec, dtype=torch.float32, device=device)
+                    at = torch.tensor(feats, dtype=torch.float32, device=device)
                     logits, value = policy.action_logits(st, at)
                     dist = torch.distributions.Categorical(logits=logits)
                     if train:
@@ -538,7 +542,9 @@ def run_episode(
                         next_state_vec = encode_state(env.state.state)
                         with torch.no_grad():
                             next_value = float(
-                                policy.value(torch.tensor(next_state_vec, dtype=torch.float32)).item()
+                                policy.value(
+                                    torch.tensor(next_state_vec, dtype=torch.float32, device=device)
+                                ).item()
                             )
                     transitions.append(
                         Transition(
@@ -576,6 +582,7 @@ def run_episode_eval(
     allocate_action_indices,
     module,
     rng,
+    device,
     mode="greedy",
 ):
     env.reset()
@@ -616,8 +623,8 @@ def run_episode_eval(
                     state_vec = encode_state(state)
                     feats = np.stack(action_feats, axis=0)
                     with torch.no_grad():
-                        st = torch.tensor(state_vec, dtype=torch.float32)
-                        at = torch.tensor(feats, dtype=torch.float32)
+                        st = torch.tensor(state_vec, dtype=torch.float32, device=device)
+                        at = torch.tensor(feats, dtype=torch.float32, device=device)
                         logits, _ = policy.action_logits(st, at)
                         chosen_idx = int(torch.argmax(logits).item())
 
@@ -788,7 +795,17 @@ def compute_gae(rewards, values, next_values, dones, gamma=0.99, lam=0.95):
     return advantages, returns
 
 
-def ppo_update(policy, optimizer, transitions, clip_eps=0.2, value_coef=0.5, entropy_coef=0.01, epochs=4, minibatch_size=256):
+def ppo_update(
+    policy,
+    optimizer,
+    transitions,
+    device,
+    clip_eps=0.2,
+    value_coef=0.5,
+    entropy_coef=0.01,
+    epochs=4,
+    minibatch_size=256,
+):
     rewards = np.array([t.reward for t in transitions], dtype=np.float32)
     values = np.array([t.value for t in transitions], dtype=np.float32)
     next_values = np.array([t.next_value for t in transitions], dtype=np.float32)
@@ -809,24 +826,24 @@ def ppo_update(policy, optimizer, transitions, clip_eps=0.2, value_coef=0.5, ent
 
             for idx in batch_idx:
                 t = transitions[idx]
-                st = torch.tensor(t.state, dtype=torch.float32)
-                at = torch.tensor(t.action_features, dtype=torch.float32)
+                st = torch.tensor(t.state, dtype=torch.float32, device=device)
+                at = torch.tensor(t.action_features, dtype=torch.float32, device=device)
                 logits, value = policy.action_logits(st, at)
                 dist = torch.distributions.Categorical(logits=logits)
 
-                action_tensor = torch.tensor(t.action_index, dtype=torch.long)
+                action_tensor = torch.tensor(t.action_index, dtype=torch.long, device=device)
                 logprob = dist.log_prob(action_tensor)
                 entropy = dist.entropy()
 
-                old = torch.tensor(t.old_logprob, dtype=torch.float32)
+                old = torch.tensor(t.old_logprob, dtype=torch.float32, device=device)
                 ratio = torch.exp(logprob - old)
-                adv = torch.tensor(advantages[idx], dtype=torch.float32)
+                adv = torch.tensor(advantages[idx], dtype=torch.float32, device=device)
 
                 surr1 = ratio * adv
                 surr2 = torch.clamp(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * adv
                 policy_losses.append(-torch.min(surr1, surr2))
 
-                ret = torch.tensor(returns[idx], dtype=torch.float32)
+                ret = torch.tensor(returns[idx], dtype=torch.float32, device=device)
                 value_losses.append((ret - value) ** 2)
                 entropies.append(entropy)
 
@@ -848,6 +865,7 @@ def evaluate(
     weapon_action_indices,
     allocate_action_indices,
     module,
+    device,
     episodes=20,
     seed=0,
     mode="greedy",
@@ -867,6 +885,7 @@ def evaluate(
             allocate_action_indices,
             module,
             rng,
+            device,
             mode=mode,
         )
         rewards.append(ep_reward)
@@ -883,6 +902,8 @@ def set_seed(seed):
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def main():
@@ -935,6 +956,7 @@ def main():
     )
 
     policy = WeaponPolicy(state_dim, action_dim)
+    policy.to(DEVICE)
     optimizer = optim.Adam(policy.parameters(), lr=3e-4)
 
     ckpt_dir = Path(__file__).with_name("checkpoints")
@@ -947,7 +969,7 @@ def main():
     if args.eval:
         if not ckpt_path.exists():
             raise FileNotFoundError(f"Checkpoint not found: {ckpt_path}")
-        data = torch.load(ckpt_path, map_location="cpu")
+        data = torch.load(ckpt_path, map_location=DEVICE)
         policy.load_state_dict(data["model"])
         mean_r, std_r, counts = evaluate(
             policy,
@@ -956,6 +978,7 @@ def main():
             weapon_action_indices,
             allocate_action_indices,
             program.module,
+            DEVICE,
             args.eval_episodes,
             args.seed,
             mode="greedy",
@@ -970,6 +993,7 @@ def main():
         weapon_action_indices,
         allocate_action_indices,
         program.module,
+        DEVICE,
         args.eval_episodes,
         args.seed,
         mode="greedy",
@@ -981,6 +1005,7 @@ def main():
         weapon_action_indices,
         allocate_action_indices,
         program.module,
+        DEVICE,
         args.eval_episodes,
         args.seed + 1,
         mode="random",
@@ -1000,12 +1025,13 @@ def main():
                 allocate_action_indices,
                 program.module,
                 rng,
+                DEVICE,
                 train=True,
             )
             transitions.extend(ep_transitions)
             episode_rewards.append(ep_reward)
 
-        ppo_update(policy, optimizer, transitions)
+        ppo_update(policy, optimizer, transitions, DEVICE)
 
         avg_reward = float(np.mean(episode_rewards)) if episode_rewards else 0.0
         do_eval = update % args.save_every == 0 or update == args.updates
@@ -1017,6 +1043,7 @@ def main():
                 weapon_action_indices,
                 allocate_action_indices,
                 program.module,
+                DEVICE,
                 args.eval_episodes,
                 args.seed + update,
                 mode="greedy",
@@ -1028,6 +1055,7 @@ def main():
                 weapon_action_indices,
                 allocate_action_indices,
                 program.module,
+                DEVICE,
                 args.eval_episodes,
                 args.seed + update + 1,
                 mode="random",
