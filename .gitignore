@@ -1,3 +1,3 @@
-examples/__pycache__/
+__pycache__/
 examples/checkpoints/
 *.pt
