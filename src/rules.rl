@@ -515,12 +515,25 @@ act attack(ctx Board board,
         subaction*(board) board.current_roll
         if board.current_roll.result != 1:
             continue
+        frm has_wounded_hazardous : Bool
+        frm has_non_character_hazardous : Bool
+        has_wounded_hazardous = false
+        has_non_character_hazardous = false
+        let i = 0
+        while i != board[source].models.size():
+            if board[source][i].has_weapon_rule(WeaponRuleKind::hazardous):
+                if board[source][i].suffered_wounds.value > 0:
+                    has_wounded_hazardous = true
+                if !board[source][i].has_keyword(Keyword::character):
+                    has_non_character_hazardous = true
+            i = i + 1
         # select a model to damage because of a hazardous roll
         act select_model(ModelID model) {
             model.get() < board[source].models.size(),
-            board[source][model.get()].has_weapon_rule(WeaponRuleKind::hazardous)
+            board[source][model.get()].has_weapon_rule(WeaponRuleKind::hazardous),
+            !has_wounded_hazardous or board[source][model.get()].suffered_wounds.value > 0,
+            has_wounded_hazardous or !has_non_character_hazardous or !board[source][model.get()].has_keyword(Keyword::character)
         }
-        # ToDo: handle non character version
         board[source].damage(model.get(), 3)
     board.current_state = CurrentStateDescription::none
     
