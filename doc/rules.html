@@ -9,7 +9,7 @@
 <h2>Actions</h2>
 <div><strong>Action</strong>: <code>evaluate_random_stat(frm Stat, frm StatModifier) -> RollStat</code></div>
 <pre><code>
- Rappresents the evaluation of stats such as the damage stat
+ Represents the evaluation of stats such as the damage stat
  of weapons, which sometime is written as 1D6 + 3
 
 </code></pre>
@@ -21,11 +21,11 @@
 
 </code></pre>
 </ul>
-<div><strong>Action</strong>: <code>rerollable_pair_dices_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Bool) -> RerollableDicePair</code></div>
+<div><strong>Action</strong>: <code>rerollable_pair_dice_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Bool) -> RerollableDicePair</code></div>
 <pre><code>
- This action rappresents charge rolls and morale tests, where the user 
- must roll two dices, can sometime benefit from a reroll due to special rules
- and finally can use a command point to reroll the dices.
+ This action represents charge rolls and morale tests, where the user 
+ must roll two dice, can sometime benefit from a reroll due to special rules
+ and finally can use a command point to reroll the dice.
 
 </code></pre>
 <ul>
@@ -52,7 +52,7 @@
 </ul>
 <div><strong>Action</strong>: <code>rerollable_dice_roll(ctx Board, frm Bool, frm Bool, frm Bool, frm Bool) -> RerollableDice</code></div>
 <pre><code>
- Rappresents all those situations in which a player must roll a dice
+ Represents all those situations in which a player must roll a dice
  for example advance rolls or hit rolls, and can sometime benefit 
  from a temporary reroll rule, or can spend a command point
 
@@ -80,9 +80,9 @@
 </ul>
 <div><strong>Action</strong>: <code>single_attack(ctx Board, ctx Unit, ctx Unit) -> SingleAttack</code></div>
 <pre><code>
- Evaulates a single attack from a given model to a target unit
+ Evaluates a single attack from a given model to a target unit
  A single attack can generate multiple hits, for example because
- of rules such as sutained_hits. 
+ of rules such as sustained_hits. 
  If the target is destroyed, this action triggers eventual on death
  mechanics.
 
@@ -150,7 +150,7 @@
 </ul>
 <div><strong>Action</strong>: <code>use_attack_stratagems(ctx Board, frm UnitID, frm UnitID, frm Bool) -> UseAttackStratagems</code></div>
 <pre><code>
- rappresents all the various stratagems that can 
+ represents all the various stratagems that can 
  be triggered after a target has been elected to attack,
  but before attacks get resolved.
 
@@ -180,7 +180,7 @@
   <li><strong>Action Statement</strong>: <code>use_dark_pact()</code></li>
 </ul>
 <ul>
-  <li><strong>Action Statement</strong>: <code>select_ability(Bool use_letal_hits)</code></li>
+  <li><strong>Action Statement</strong>: <code>select_ability(Bool use_lethal_hits)</code></li>
 </ul>
 <ul>
   <li><strong>Action Statement</strong>: <code>use_swift_kill()</code></li>
@@ -307,7 +307,7 @@
 </ul>
 <div><strong>Action</strong>: <code>move(ctx Board, ctx UnitID, frm StatModifier) -> Move</code></div>
 <pre><code>
- core rules movement rules, including the possiblity 
+ core rules movement rules, including the possibility 
  of advancing and the triggering of overwatches
 
 </code></pre>
@@ -460,7 +460,7 @@
 <div><strong>Action</strong>: <code>deploy(ctx Board) -> Deployment</code></div>
 <pre><code>
  the core rules sequence where players
- alterante deploying units in a valid position 
+ alternate deploying units in a valid position 
 
 </code></pre>
 <ul>
@@ -474,7 +474,7 @@
 </ul>
 <div><strong>Action</strong>: <code>battle(ctx Board) -> Battle</code></div>
 <pre><code>
- a 5 rounds battle, inlcuding deployment. 
+ a 5 rounds battle, including deployment. 
 
 </code></pre>
 <div><strong>Action</strong>: <code>pick_army(ctx Board, frm Bool) -> PickFaction</code></div>
@@ -506,7 +506,7 @@
 <pre><code>
  Calculates the required roll to wound given a particular game state,
  that is, the calculation includes situational condition like the usage
- of a lance weapon, instead of only considering strenght and toughness
+ of a lance weapon, instead of only considering strength and toughness
 
 </code></pre>
 <li><strong>Function</strong>: <code>evaluate_random_stat(Stat stat)  -> RollStat</code></li>

@@ -119,7 +119,7 @@ That’s all it takes. From this description, it is possible to:
 * Generate an editor that can run in the browser.
 ![Editor image](imgs/editor.png)
 
-* Generate an agent to test and maximize the scenario’s score. In this case we can see that the agent, while learning to play the game, obtained a final score of 1.5 destroyed models. Notice that the player one is trying to remove as many enemy models as possible, and player two is activelly trying to prevnt player 1 to do so, it is not just playing at random, it is doing the best moves possible.
+* Generate an agent to test and maximize the scenario’s score. In this case we can see that the agent, while learning to play the game, obtained a final score of 1.5 destroyed models. Notice that the player one is trying to remove as many enemy models as possible, and player two is actively trying to prevent player 1 to do so, it is not just playing at random, it is doing the best moves possible.
 ![Obtained reward](imgs/Reward.png)
 
 * Measure the important metrics, in this case we can then measure how many models are left in the target unit when the agent is playing.

@@ -10,7 +10,7 @@ func _ready() -> void:
 func on_remote_mode_activated():
 	$AcceptRejectAction.hide()
 	$RollDiceButton.hide()
-	$MultipleChoise.active = false
+	$MultipleChoice.active = false
 	$LeftBar.hide()
 
 func add_message(message: String):

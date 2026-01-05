@@ -26,7 +26,7 @@ enum WeaponRuleKind:
     psychic
     devastating_wounds
     sustained_hit
-    letal_hits 
+    lethal_hits 
     precision
     hazardous
     anti_monster
@@ -112,7 +112,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2))
@@ -120,15 +120,15 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(6)
         Int skill = 2
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -2
         Stat damage = raw_stat(2)
-        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::letal_hits), weapon_rule(WeaponRuleKind::precision))
+        WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::lethal_hits), weapon_rule(WeaponRuleKind::precision))
     smite_witchfire:
         Int range = 24
         Stat attacks = dice_stat(6)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::psychic))
@@ -136,7 +136,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = dice_stat(6)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -2
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(
@@ -147,7 +147,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2))
@@ -155,7 +155,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -1
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::psychic))
@@ -163,7 +163,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -171,7 +171,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = dice_stat(6)
         Int skill = 0
-        Int strenght = 5
+        Int strength = 5
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(
@@ -181,7 +181,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -189,7 +189,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(6)
         Int skill = 3
-        Int strenght = 6
+        Int strength = 6
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::devastating_wounds))
@@ -197,7 +197,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 2))
@@ -205,7 +205,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 3
-        Int strenght = 8
+        Int strength = 8
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
@@ -213,7 +213,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -221,7 +221,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(6)
         Int skill = 2
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
@@ -229,7 +229,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(6)
         Int skill = 2
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
@@ -237,7 +237,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(6)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -245,7 +245,7 @@ enum Weapon:
         Int range = 18
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -3
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -257,7 +257,7 @@ enum Weapon:
         Int range = 18
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -2
         Stat damage = raw_stat(3)
         WeaponRules rules = weapon_rules(
@@ -270,7 +270,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -1
         Stat damage = dice_stat(3)
         WeaponRules rules = weapon_rules(
@@ -280,7 +280,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
@@ -288,7 +288,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -296,7 +296,7 @@ enum Weapon:
         Int range = 36
         Stat attacks = raw_stat(3)
         Int skill = 4
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -307,7 +307,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 3
-        Int strenght = 9
+        Int strength = 9
         Int penetration = -4
         Stat damage = dice_stat(6)  
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::melta, 2))
@@ -315,7 +315,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 3
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -323,7 +323,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 3
-        Int strenght = 8
+        Int strength = 8
         Int penetration = -3
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -334,7 +334,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -342,7 +342,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -350,7 +350,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 4
-        Int strenght = 3
+        Int strength = 3
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -358,7 +358,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 4
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -366,7 +366,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(2)
         Int skill = 4
-        Int strenght = 3
+        Int strength = 3
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -374,7 +374,7 @@ enum Weapon:
         Int range = 18
         Stat attacks = raw_stat(2)
         Int skill = 4
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::rapid_fire, 1))
@@ -382,7 +382,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 10
+        Int strength = 10
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -393,7 +393,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(6)
         Int skill = 2
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -403,7 +403,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(1)
         Int skill = 5
-        Int strenght = 4
+        Int strength = 4
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -411,7 +411,7 @@ enum Weapon:
         Int range = 18
         Stat attacks = dice_stat(3)  
         Int skill = 5
-        Int strenght = 6
+        Int strength = 6
         Int penetration = 0
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast))
@@ -419,7 +419,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -427,7 +427,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
@@ -435,7 +435,7 @@ enum Weapon:
         Int range = 9
         Stat attacks = raw_stat(1)
         Int skill = 4
-        Int strenght = 3
+        Int strength = 3
         Int penetration = 0
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(
@@ -445,7 +445,7 @@ enum Weapon:
         Int range = 9
         Stat attacks = raw_stat(1)
         Int skill = 5
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -457,7 +457,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -468,7 +468,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -480,7 +480,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 4
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -490,7 +490,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(6)
         Int skill = 2
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::precision))
@@ -498,7 +498,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(9)
         Int skill = 2
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::sustained_hit, 1))
@@ -506,7 +506,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(5)
         Int skill = 2
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -3
         Stat damage = raw_stat(3)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::devastating_wounds))
@@ -514,7 +514,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(2)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -525,7 +525,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(5)
         Int skill = 2
-        Int strenght = 6
+        Int strength = 6
         Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules()
@@ -533,7 +533,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
@@ -541,7 +541,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
@@ -549,7 +549,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 2
-        Int strenght = 9
+        Int strength = 9
         Int penetration = -1
         Stat damage = raw_stat(3)
         WeaponRules rules = weapon_rules()
@@ -557,7 +557,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(5)
         Int skill = 2
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
@@ -565,7 +565,7 @@ enum Weapon:
         Int range = 18
         Stat attacks = dice_stat(6)  
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::blast))
@@ -574,7 +574,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::assault))
@@ -583,7 +583,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(5)
         Int skill = 2
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
@@ -591,7 +591,7 @@ enum Weapon:
         Int range = 12
         Stat attacks = raw_stat(3)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -599,7 +599,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(5)
         Int skill = 2
-        Int strenght = 8
+        Int strength = 8
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()
@@ -607,7 +607,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(3)
         Int skill = 2
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -617,7 +617,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(
@@ -628,7 +628,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 7
+        Int strength = 7
         Int penetration = -2
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(
@@ -640,7 +640,7 @@ enum Weapon:
         Int range = 24
         Stat attacks = raw_stat(2)
         Int skill = 3
-        Int strenght = 8
+        Int strength = 8
         Int penetration = -3
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules(
@@ -652,7 +652,7 @@ enum Weapon:
         Int range = 18
         Stat attacks = raw_stat(1)
         Int skill = 3
-        Int strenght = 4
+        Int strength = 4
         Int penetration = -1
         Stat damage = raw_stat(1)
         WeaponRules rules = weapon_rules(weapon_rule(WeaponRuleKind::pistol))
@@ -661,7 +661,7 @@ enum Weapon:
         Int range = 0
         Stat attacks = raw_stat(4)
         Int skill = 3
-        Int strenght = 5
+        Int strength = 5
         Int penetration = -2
         Stat damage = raw_stat(2)
         WeaponRules rules = weapon_rules()

@@ -1,7 +1,7 @@
 extends Sprite2D
 
 var source : Sprite2D
-var intesity = 0.0
+var intensity = 0.0
 var current_select_model_action = null
 var current_target_unit_action = null
 var current_select_unit_action = null
@@ -77,12 +77,12 @@ func unmark_possible_targets():
 
 func _process(delta):
 	if source == null:
-		intesity -= delta
+		intensity -= delta
 	else:
-		intesity += delta
+		intensity += delta
 		
-	intesity = clamp(intesity, 0.0, 1.0)
-	modulate = lerp(Color.TRANSPARENT, Color.GREEN_YELLOW, intesity)
+	intensity = clamp(intensity, 0.0, 1.0)
+	modulate = lerp(Color.TRANSPARENT, Color.GREEN_YELLOW, intensity)
 	if source == null:
 		return
 	position = (source.position + get_global_mouse_position()) / 2

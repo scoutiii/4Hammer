@@ -59,7 +59,7 @@ cls Model:
             i = i + 1
         return false
 
-    fun consolidate_torward(Unit other):
+    fun consolidate_toward(Unit other):
         let consolidation = other.get_shortest_vector_to(self) * -1.0
     
         if consolidation.length() > 2.0:
@@ -109,7 +109,7 @@ fun unit_id(Int id) -> UnitID:
     return to_return
 
 cls PhaseModifiers:
-    Bool greater_strenght_wound_protection 
+    Bool greater_strength_wound_protection 
 
 cls Unit:
     ModelVector models # required
@@ -119,15 +119,15 @@ cls Unit:
     Bool has_run 
     Bool has_fought
     Bool has_shoot
-    Bool battle_socked
+    Bool battle_shocked
     Bool has_charged
     Bool can_shoot
     Bool can_charge
-    ModelID starting_strenght
+    ModelID starting_strength
     PhaseModifiers phase_modifiers
 
-    fun has_greater_strenght_wound_protection() -> Bool:
-        return self.phase_modifiers.greater_strenght_wound_protection 
+    fun has_greater_strength_wound_protection() -> Bool:
+        return self.phase_modifiers.greater_strength_wound_protection 
 
     fun clear_phase_modifiers():
         let mod : PhaseModifiers
@@ -136,7 +136,7 @@ cls Unit:
     fun is_lone_operative() -> Bool:
         return self.has_ability(AbilityKind::lone_operative)
 
-    fun remove_figth_on_death_models():
+    fun remove_fight_on_death_models():
         let i = self.models.size() - 1
         while i > 0:
             if self.models[i].state == ModelState::fight_on_death:
@@ -158,10 +158,10 @@ cls Unit:
     fun empty() -> Bool:
         return self.models.empty()
 
-    fun consolidate_torward(Unit other):
+    fun consolidate_toward(Unit other):
         let i = 0
         while i != self.models.size():
-            self.models[i].consolidate_torward(other)
+            self.models[i].consolidate_toward(other)
             i = i + 1
 
     fun attach_to(Unit other):
@@ -180,7 +180,7 @@ cls Unit:
 
         return best_leadership
         
-    fun has_temporary_wepon_rule(WeaponRuleKind rule) -> Bool: 
+    fun has_temporary_weapon_rule(WeaponRuleKind rule) -> Bool: 
         let temp_rules = self.get_temporary_weapon_rules()
         let i = 0
         while i != temp_rules.size():
@@ -189,11 +189,11 @@ cls Unit:
             i = i + 1
         return false
 
-    fun is_below_half_strenght() -> Bool:
-        if self.starting_strenght.get() == 1:
+    fun is_below_half_strength() -> Bool:
+        if self.starting_strength.get() == 1:
             return self.models[0].is_below_half_wounds()
         
-        return self.starting_strenght.get() / 2 > self.models.size()
+        return self.starting_strength.get() / 2 > self.models.size()
 
     fun get_temporary_weapon_parameter(WeaponRuleKind rule) -> Int: 
         let temp_rules = self.get_temporary_weapon_rules()
@@ -242,10 +242,10 @@ cls Unit:
     fun get_unit_toughtness() -> Int:
         if self.models.size() == 0:
             return 0
-        let max_toughness = self.models[0].profile.thoughness()
+        let max_toughness = self.models[0].profile.toughness()
         let i = 1
         while i != self.models.size():
-            let max_toughness = max(self.models[i].profile.thoughness(), max_toughness)
+            let max_toughness = max(self.models[i].profile.toughness(), max_toughness)
             i = i + 1
         return max_toughness 
 

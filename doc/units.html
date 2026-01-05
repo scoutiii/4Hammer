@@ -28,7 +28,7 @@
 <li><strong>Function</strong>: <code>has_keyword(Keyword keyword)  -> Bool</code></li>
 <li><strong>Function</strong>: <code>has_weapon_rule(WeaponRuleKind rule)  -> Bool</code></li>
 <li><strong>Function</strong>: <code>has_ability(AbilityKind kind)  -> Bool</code></li>
-<li><strong>Function</strong>: <code>consolidate_torward(Unit other) </code></li>
+<li><strong>Function</strong>: <code>consolidate_toward(Unit other) </code></li>
 <li><strong>Function</strong>: <code>is_character()  -> Bool</code></li>
 <li><strong>Function</strong>: <code>distance(Model model)  -> Float</code></li>
 <li><strong>Function</strong>: <code>wounds_left()  -> Int</code></li>
@@ -56,7 +56,7 @@
 <h2>Class PhaseModifiers</h2>
 <h3>Fields</h3>
 <ul>
-  <li><code>Bool greater_strenght_wound_protection</code></li>
+  <li><code>Bool greater_strength_wound_protection</code></li>
 </ul>
 <h2>Class Unit</h2>
 <h3>Fields</h3>
@@ -68,16 +68,16 @@
   <li><code>Bool has_run</code></li>
   <li><code>Bool has_fought</code></li>
   <li><code>Bool has_shoot</code></li>
-  <li><code>Bool battle_socked</code></li>
+  <li><code>Bool battle_shocked</code></li>
   <li><code>Bool has_charged</code></li>
   <li><code>Bool can_shoot</code></li>
   <li><code>Bool can_charge</code></li>
-  <li><code>ModelID starting_strenght</code></li>
+  <li><code>ModelID starting_strength</code></li>
   <li><code>PhaseModifiers phase_modifiers</code></li>
 </ul>
 <h3>Methods</h3>
 <ul>
-<li><strong>Function</strong>: <code>has_greater_strenght_wound_protection()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_greater_strength_wound_protection()  -> Bool</code></li>
 <pre><code>
  required
  required
@@ -86,16 +86,16 @@
 </code></pre>
 <li><strong>Function</strong>: <code>clear_phase_modifiers() </code></li>
 <li><strong>Function</strong>: <code>is_lone_operative()  -> Bool</code></li>
-<li><strong>Function</strong>: <code>remove_figth_on_death_models() </code></li>
+<li><strong>Function</strong>: <code>remove_fight_on_death_models() </code></li>
 <li><strong>Function</strong>: <code>can_reroll_charge()  -> Bool</code></li>
 <li><strong>Function</strong>: <code>owner_id()  -> Int</code></li>
 <li><strong>Function</strong>: <code>get_temporary_weapon_rules()  -> BoundedVector<WeaponRule, 1></code></li>
 <li><strong>Function</strong>: <code>empty()  -> Bool</code></li>
-<li><strong>Function</strong>: <code>consolidate_torward(Unit other) </code></li>
+<li><strong>Function</strong>: <code>consolidate_toward(Unit other) </code></li>
 <li><strong>Function</strong>: <code>attach_to(Unit other) </code></li>
 <li><strong>Function</strong>: <code>get_leadership()  -> Int</code></li>
-<li><strong>Function</strong>: <code>has_temporary_wepon_rule(WeaponRuleKind rule)  -> Bool</code></li>
-<li><strong>Function</strong>: <code>is_below_half_strenght()  -> Bool</code></li>
+<li><strong>Function</strong>: <code>has_temporary_weapon_rule(WeaponRuleKind rule)  -> Bool</code></li>
+<li><strong>Function</strong>: <code>is_below_half_strength()  -> Bool</code></li>
 <li><strong>Function</strong>: <code>get_temporary_weapon_parameter(WeaponRuleKind rule)  -> Int</code></li>
 <li><strong>Function</strong>: <code>max_weapon_parameter(Weapon w, WeaponRuleKind kind)  -> Int</code></li>
 <li><strong>Function</strong>: <code>all_have_ability(AbilityKind kind)  -> Bool</code></li>

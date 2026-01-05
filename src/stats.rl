@@ -113,7 +113,7 @@ fun size_as_observation_tensor(Keyword kind) -> Int:
 enum Profile:
     captain_octavius:
         Int movement = 5
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 2
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -123,7 +123,7 @@ enum Profile:
         Float base_size = 50.0
     librarian_tantus:
         Int movement = 5
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 2
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -133,7 +133,7 @@ enum Profile:
         Float base_size = 40.0
     infernus_squad:
         Int movement = 6
-        Int thoughness = 4
+        Int toughness = 4
         Int save = 3
         Int invuln_save = 10
         Int feel_no_pain = 10
@@ -143,7 +143,7 @@ enum Profile:
         Float base_size = 32.0
     terminator_squad:
         Int movement = 5
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 2
         Int invuln_save = 4
         Int wounds = 3
@@ -152,7 +152,7 @@ enum Profile:
         Float base_size = 40.0
     death_shadow:
         Int movement = 8
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 4
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -162,7 +162,7 @@ enum Profile:
         Float base_size = 50.0
     lictor:
         Int movement = 8
-        Int thoughness = 6
+        Int toughness = 6
         Int save = 4
         Int invuln_save = 10
         Int wounds = 6
@@ -171,7 +171,7 @@ enum Profile:
         Float base_size = 50.0
     von_ryan_leaper:
         Int movement = 10
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 4
         Int invuln_save = 6
         Int feel_no_pain = 10
@@ -181,7 +181,7 @@ enum Profile:
         Float base_size = 40.0
     aranis_zarkan:
         Int movement = 8
-        Int thoughness = 4
+        Int toughness = 4
         Int save = 3
         Int invuln_save = 5
         Int wounds = 4
@@ -190,7 +190,7 @@ enum Profile:
         Float base_size = 40.0
     possessed:
         Int movement = 9
-        Int thoughness = 6
+        Int toughness = 6
         Int save = 3
         Int invuln_save = 5
         Int feel_no_pain = 10
@@ -200,7 +200,7 @@ enum Profile:
         Float base_size = 40.0
     legionaries:
         Int movement = 6
-        Int thoughness = 4
+        Int toughness = 4
         Int save = 3
         Int invuln_save = 10
         Int wounds = 2
@@ -209,7 +209,7 @@ enum Profile:
         Float base_size = 32.0
     cultist_mob:
         Int movement = 6
-        Int thoughness = 3
+        Int toughness = 3
         Int save = 6
         Int invuln_save = 10
         Int feel_no_pain = 10
@@ -219,7 +219,7 @@ enum Profile:
         Float base_size = 25.0
     beastboss_morgrim:
         Int movement = 6
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 4
         Int invuln_save = 5
         Int feel_no_pain = 5
@@ -229,7 +229,7 @@ enum Profile:
         Float base_size = 50.0
     beast_snagga_boy:
         Int movement = 6
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 5
         Int invuln_save = 10
         Int feel_no_pain = 6
@@ -239,7 +239,7 @@ enum Profile:
         Float base_size = 32.0
     beast_snagga_nob:
         Int movement = 6
-        Int thoughness = 5
+        Int toughness = 5
         Int save = 5
         Int invuln_save = 10
         Int wounds = 3    
@@ -249,7 +249,7 @@ enum Profile:
         Float base_size = 32.0
     squighog_boyz:
         Int movement = 10
-        Int thoughness = 7
+        Int toughness = 7
         Int save = 4
         Int invuln_save = 10
         Int feel_no_pain = 5
@@ -259,7 +259,7 @@ enum Profile:
         Float base_size = 75.0
     nob_on_smasha_squig:
         Int movement = 10
-        Int thoughness = 7
+        Int toughness = 7
         Int save = 4
         Int invuln_save = 10
         Int feel_no_pain = 5
@@ -269,7 +269,7 @@ enum Profile:
         Float base_size = 90.0
     tristraen:
         Int movement = 6
-        Int thoughness = 6
+        Int toughness = 6
         Int save = 2
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -279,7 +279,7 @@ enum Profile:
         Float base_size = 40.0
     custodian_wardens:
         Int movement = 6
-        Int thoughness = 6
+        Int toughness = 6
         Int save = 2
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -289,7 +289,7 @@ enum Profile:
         Float base_size = 40.0
     allarus_custodians:
         Int movement = 5
-        Int thoughness = 7
+        Int toughness = 7
         Int save = 2
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -299,7 +299,7 @@ enum Profile:
         Float base_size = 40.0
     custodian_guard:
         Int movement = 6
-        Int thoughness = 6
+        Int toughness = 6
         Int save = 2
         Int invuln_save = 4
         Int feel_no_pain = 10
@@ -309,7 +309,7 @@ enum Profile:
         Float base_size = 40.0
     master_zacharial:
         Int movement = 5
-        Int thoughness = 6
+        Int toughness = 6
         Int feel_no_pain = 10
         Int save = 3
         Int invuln_save = 4
@@ -319,7 +319,7 @@ enum Profile:
         Float base_size = 40.0
     intercessor_squad:
         Int movement = 6
-        Int thoughness = 4
+        Int toughness = 4
         Int save = 3
         Int invuln_save = 10
         Int feel_no_pain = 10
@@ -329,7 +329,7 @@ enum Profile:
         Float base_size = 32.0
     hellblaster_squad:
         Int movement = 6
-        Int thoughness = 4
+        Int toughness = 4
         Int save = 3
         Int invuln_save = 10
         Int feel_no_pain = 10
@@ -339,7 +339,7 @@ enum Profile:
         Float base_size = 32.0
     bladeguard_veteran_squad:
         Int movement = 6
-        Int thoughness = 4
+        Int toughness = 4
         Int save = 3
         Int invuln_save = 4
         Int wounds = 3

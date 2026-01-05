@@ -7,7 +7,7 @@ func _ready() -> void:
 	on_state_change()
 
 func on_state_change():
-	visible = GlobalRules.choise_is_random()
+	visible = GlobalRules.choice_is_random()
 	
 
 func _on_button_down() -> void:

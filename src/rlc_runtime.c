@@ -57,24 +57,24 @@ void rl_append_to_string__int64_t_String(int64_t* toConvert, String* out)
 {
 	char buffer[256];
 	sprintf(buffer, "%" PRId64, *toConvert);
-	char* addres = buffer;
-	impl_rl_m_append__String_strlit(out, &addres);
+	char* address = buffer;
+	impl_rl_m_append__String_strlit(out, &address);
 }
 
 void rl_append_to_string__int8_t_String(int8_t* toConvert, String* out)
 {
 	char buffer[256];
 	sprintf(buffer, "%" PRId8, *toConvert);
-	char* addres = buffer;
-	impl_rl_m_append__String_strlit(out, &addres);
+	char* address = buffer;
+	impl_rl_m_append__String_strlit(out, &address);
 }
 
 void rl_append_to_string__double_String(double* toConvert, String* out)
 {
 	char buffer[256];
 	sprintf(buffer, "%f", *toConvert);
-	char* addres = buffer;
-	impl_rl_m_append__String_strlit(out, &addres);
+	char* address = buffer;
+	impl_rl_m_append__String_strlit(out, &address);
 }
 
 void rl_print_string__String(String* s)
