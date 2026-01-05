@@ -25,6 +25,16 @@ function findQualifier(lineText, wordRange) {
   return match ? match[1] : null;
 }
 
+async function findImportTargets(word) {
+  const matches = await vscode.workspace.findFiles(
+    `**/${word}.rl`,
+    "**/node_modules/**"
+  );
+  return matches.map(
+    (uri) => new vscode.Location(uri, new vscode.Position(0, 0))
+  );
+}
+
 async function findDefinitions(word, qualifier) {
   const files = await vscode.workspace.findFiles("**/*.rl", "**/node_modules/**");
   const qualifiedResults = [];
@@ -37,6 +47,7 @@ async function findDefinitions(word, qualifier) {
   const enumPattern = new RegExp(`^\\s*enum\\s+${escapeRegex(word)}\\b`);
   const clsPattern = new RegExp(`^\\s*cls\\s+${escapeRegex(word)}\\b`);
   const usingPattern = new RegExp(`^\\s*using\\s+${escapeRegex(word)}\\b`);
+  const constPattern = new RegExp(`^\\s*const\\s+${escapeRegex(word)}\\b`);
   const enumHeaderPattern = /^\s*enum\s+([A-Za-z_][A-Za-z0-9_]*)\b/;
 
   for (const uri of files) {
@@ -78,7 +89,8 @@ async function findDefinitions(word, qualifier) {
         funPattern.test(line) ||
         actPattern.test(line) ||
         clsPattern.test(line) ||
-        usingPattern.test(line)
+        usingPattern.test(line) ||
+        constPattern.test(line)
       ) {
         const column = line.search(wordPattern);
         const position = new vscode.Position(lineIndex, Math.max(0, column));
@@ -142,6 +154,16 @@ function activate(context) {
       }
 
       const lineText = document.lineAt(position.line).text;
+      const importMatch = lineText.match(
+        /^\s*import\s+([A-Za-z_][A-Za-z0-9_]*)\b/
+      );
+      if (importMatch && importMatch[1] === word) {
+        const importLocations = await findImportTargets(word);
+        if (importLocations.length > 0) {
+          return importLocations;
+        }
+      }
+
       const qualifier = findQualifier(lineText, wordRange);
       const locations = await findDefinitions(word, qualifier);
       if (locations.length === 0) {
