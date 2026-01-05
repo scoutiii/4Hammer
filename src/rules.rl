@@ -8,13 +8,13 @@ import board
 
 # Calculates the required roll to wound given a particular game state,
 # that is, the calculation includes situational condition like the usage
-# of a lance weapon, instead of only considering strenght and toughness
+# of a lance weapon, instead of only considering strength and toughness
 fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
 
-    let strenght = info.source.strenght()
-    let thoughness = info.target_toughness.value
+    let strength = info.source.strength()
+    let toughness = info.target_toughness.value
     let modifiers = info.total_wound_modifier() 
-    if thoughness < strenght and info.greater_strenght_wound_protection:
+    if toughness < strength and info.greater_strength_wound_protection:
         modifiers = modifiers + 1
     if info.has_weapon_rule(board, WeaponRuleKind::lance) and board[info.source_unit_id].has_charged:
         modifiers = modifiers + 1
@@ -25,19 +25,19 @@ fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
     if 0 > modifiers:
         clamped_modifier = -1
  
-    if strenght == thoughness:
+    if strength == toughness:
         return 4 + clamped_modifier
 
-    if strenght * 2 < thoughness:
+    if strength * 2 < toughness:
         return 6 + clamped_modifier
     
-    if strenght < thoughness:
+    if strength < toughness:
         return 5 + clamped_modifier
 
-    if strenght > thoughness * 2:
+    if strength > toughness * 2:
         return 2 + clamped_modifier
     
-    if strenght > thoughness:
+    if strength > toughness:
         return 3 + clamped_modifier
 
     return 0
@@ -45,13 +45,12 @@ fun required_wound_roll(Board board, AttackSequenceInfo info) -> Int:
 
 using StatModifier = LinearlyDistributedInt<0, 4>
 using RandomStatResult = LinearlyDistributedInt<0, 10>
-# Rappresents the evaluation of stats such as the damage stat
+# Represents the evaluation of stats such as the damage stat
 # of weapons, which sometime is written as 1D6 + 3
 act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollStat:
     frm result : RandomStatResult 
-
-    if stat is Int:
-        result = stat + fixed_extra.value
+    if stat is LinearlyDistributedInt<0, 20>:
+        result = stat.value + fixed_extra.value
         return
 
     if stat is Dice:
@@ -62,6 +61,7 @@ act evaluate_random_stat(frm Stat stat, frm  StatModifier fixed_extra) -> RollSt
             dice.value <= max_quantity.value
         }
         result = dice.value + fixed_extra.value
+        return
 
 fun evaluate_random_stat(Stat stat) -> RollStat:
     let zero : StatModifier 
@@ -72,10 +72,10 @@ fun evaluate_random_stat(Stat stat, Int modifier) -> RollStat:
     mod= modifier
     return evaluate_random_stat(stat, mod) 
 
-# This action rappresents charge rolls and morale tests, where the user 
-# must roll two dices, can sometime benefit from a reroll due to special rules
-# and finally can use a command point to reroll the dices.
-act rerollable_pair_dices_roll(ctx Board board, 
+# This action represents charge rolls and morale tests, where the user 
+# must roll two dice, can sometime benefit from a reroll due to special rules
+# and finally can use a command point to reroll the dice.
+act rerollable_pair_dice_roll(ctx Board board, 
                                frm Bool reroll, 
                                frm Bool reroll_1s, 
                                frm Bool cp_rerollable,
@@ -102,7 +102,7 @@ act rerollable_pair_dices_roll(ctx Board board,
         result2 = new_value2
         return
 
-# Rappresents all those situations in which a player must roll a dice
+# Represents all those situations in which a player must roll a dice
 # for example advance rolls or hit rolls, and can sometime benefit 
 # from a temporary reroll rule, or can spend a command point
 act rerollable_dice_roll(ctx Board board, 
@@ -137,9 +137,9 @@ fun get_hit_roll_bonus(Board board) -> Int:
         return -1
     return 0
 
-# Evaulates a single attack from a given model to a target unit
+# Evaluates a single attack from a given model to a target unit
 # A single attack can generate multiple hits, for example because
-# of rules such as sutained_hits. 
+# of rules such as sustained_hits. 
 # If the target is destroyed, this action triggers eventual on death
 # mechanics.
 act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> SingleAttack:
@@ -165,7 +165,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         # sixes trigger a explosive hits
         if board.current_roll.result == 6:
            generated_hits = generated_hits + board.attack_info.max_weapon_parameter(board, WeaponRuleKind::sustained_hit) 
-        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::letal_hits):
+        if board.attack_info.has_weapon_rule(board, WeaponRuleKind::lethal_hits):
             generated_wounds = generated_wounds + 1
         else:
             generated_hits = generated_hits + 1
@@ -217,7 +217,12 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
         board.current_state = CurrentStateDescription::save_roll
         subaction*(board) board.current_roll 
         ref target_model = target.models[id.get()]
-        let best_save = min(target_model.profile.save() + board.attack_info.source.penetration() + int(board.attack_info.penetration_bonus), target_model.profile.invuln_save())
+        let best_save = min(
+            target_model.profile.save()
+            - board.attack_info.source.penetration()
+            + int(board.attack_info.penetration_bonus),
+            target_model.profile.invuln_save()
+        )
         if board.current_roll.result >= best_save:
             continue
         board.current_state = CurrentStateDescription::damage_roll
@@ -234,7 +239,7 @@ act single_attack(ctx Board board, ctx Unit target, ctx Unit source_unit) -> Sin
 act on_model_destroyed(ctx Board board, 
                        ctx Unit source, 
                        ctx Model destroyed) -> OnModelDestroyed:
-    if is_character and source.has_ability(AbilityKind::feeder_tendrils):
+    if destroyed.is_character() and source.has_ability(AbilityKind::feeder_tendrils):
         board.add_extra_cp(int(source.owned_by_player1))
 
     if destroyed.has_keyword(Keyword::master_of_possession) and board.can_use_strat(!source.owned_by_player1, Stratagem::violent_unbidding):
@@ -292,15 +297,15 @@ fun _configure_attack(Board board, Int source, Int target, Bool overwatch, Bool 
         attack.only_hits_on_6 = true 
 
     attack.target_toughness = board[target].get_unit_toughtness()
-    attack.greater_strenght_wound_protection = board[target].has_greater_strenght_wound_protection()
+    attack.greater_strength_wound_protection = board[target].has_greater_strength_wound_protection()
 
     if board[target].has_ability(AbilityKind::stealth) and !melee:
         attack.hit_roll_malus = true
 
     # neurolictor psycological sabuteur
-    if board[source].battle_socked and board.any_enemy_in_range_has_ability(board[source], 12.0, AbilityKind::psychological_saboteur):
+    if board[source].battle_shocked and board.any_enemy_in_range_has_ability(board[source], 12.0, AbilityKind::psychological_saboteur):
         attack.hit_roll_malus = true
-    if board[target].battle_socked and board.any_enemy_in_range_has_ability(board[target], 12.0, AbilityKind::psychological_saboteur):
+    if board[target].battle_shocked and board.any_enemy_in_range_has_ability(board[target], 12.0, AbilityKind::psychological_saboteur):
         attack.wound_roll_bonus = true
 
     if target == board.oath_of_moment_target.get():
@@ -358,7 +363,7 @@ act resolve_model_attack(ctx Board board,
         if board[target].models.size() == 0:
             return
 
-# rappresents all the various stratagems that can 
+# represents all the various stratagems that can 
 # be triggered after a target has been elected to attack,
 # but before attacks get resolved.
 act use_attack_stratagems(ctx Board board, 
@@ -373,14 +378,14 @@ act use_attack_stratagems(ctx Board board,
             board.can_use_strat(bool(target_player), Stratagem::tough_as_squig_hide),
             board.players_faction[int(target_player)] == Faction::morgrim_butchas
         }
-            board[target].phase_modifiers.greater_strenght_wound_protection = true
+            board[target].phase_modifiers.greater_strength_wound_protection = true
             board.pay_strat(bool(target_player), Stratagem::tough_as_squig_hide)
             board.mark_strat_used(Stratagem::tough_as_squig_hide, int(target_player))
         act use_gene_wrought_resiliance() {
             board.can_use_strat(bool(target_player), Stratagem::gene_wrought_resiliance),
             board.players_faction[int(target_player)] == Faction::strike_force_octavius
         }
-            board[target].phase_modifiers.greater_strenght_wound_protection = true
+            board[target].phase_modifiers.greater_strength_wound_protection = true
             board.pay_strat(bool(target_player), Stratagem::gene_wrought_resiliance)
             board.mark_strat_used(Stratagem::gene_wrought_resiliance, int(target_player))
         act use_daemonic_fervour() {
@@ -418,15 +423,15 @@ act use_attack_stratagems(ctx Board board,
         act use_dark_pact(){
             board.players_faction[int(target_player)] == Faction::zarkan_daemonkin
         }
-            board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, true, !target_player)
+            board.current_pair_roll = rerollable_pair_dice_roll(board, false, false, true, !target_player)
             subaction*(board) board.current_roll 
             if board.current_pair_roll.result < board[source].get_leadership():
                 board.current_roll = rerollable_dice_roll(board, false, false, false, !target_player)
                 subaction*(board) board.current_roll 
                 board[source].deal_mortal_wound_damage(board.current_roll.result.value)
-            act select_ability(Bool use_letal_hits)
-            if use_letal_hits:
-                board.attack_info.add_letal_hits()
+            act select_ability(Bool use_lethal_hits)
+            if use_lethal_hits:
+                board.attack_info.add_lethal_hits()
             else:
                 board.attack_info.add_sustained_hits(1)
                 
@@ -445,7 +450,7 @@ act use_attack_stratagems(ctx Board board,
             board.players_faction[int(!target_player)] == Faction::zarkan_daemonkin
         }
             board.attack_info.reroll1_hits = true
-            if board[target].is_below_half_strenght():
+            if board[target].is_below_half_strength():
                 board.attack_info.reroll1_wounds = true
             board.pay_strat(!bool(target_player), Stratagem::vindictive_strategy)
             board.mark_strat_used(Stratagem::vindictive_strategy, int(!target_player))
@@ -466,7 +471,7 @@ act use_attack_stratagems(ctx Board board,
                 act use_dacatarai_stance() 
                 board.attack_info.add_sustained_hits(1)
                 act use_rendax_stance()             
-                board.attack_info.add_letal_hits()
+                board.attack_info.add_lethal_hits()
 
 
 
@@ -534,7 +539,7 @@ act attack(ctx Board board,
             id = model.value
             subaction*(board) fight_on_death_attack = resolve_model_attack(board, target, source, id, melee)
         model = model + 1
-    board[target].remove_figth_on_death_models()
+    board[target].remove_fight_on_death_models()
         
 
 
@@ -586,16 +591,16 @@ act battle_shock_test(ctx Board board, ctx Unit unit) -> BattleShockTest:
             board.mark_strat_used(Stratagem::insane_bravery, int(board.current_player))
                 return
 
-    board.current_pair_roll = rerollable_pair_dices_roll(board, false, false, true, board.current_player)
+    board.current_pair_roll = rerollable_pair_dice_roll(board, false, false, true, board.current_player)
     subaction*(board) board.current_pair_roll
     if board.current_pair_roll.result.value + board.current_pair_roll.result2.value < unit.get_leadership():
-        unit.battle_socked = true
+        unit.battle_shocked = true
 
 # the core rules battle shock step
 act battle_shock_step(ctx Board board) -> BattleShockStep:
     frm i : UnitIterator
     while i != board.units.size():
-        board[i.value].battle_socked = false 
+        board[i.value].battle_shocked = false 
         board[i.value].has_run  = false 
         board[i.value].has_fought  = false 
         board[i.value].has_shoot = false 
@@ -606,7 +611,7 @@ act battle_shock_step(ctx Board board) -> BattleShockStep:
         if board[i.value].owned_by_player1 != board.current_player:
             i = i + 1
             continue
-        if !board[i.value].is_below_half_strenght():
+        if !board[i.value].is_below_half_strength():
             i = i + 1
             continue
         subaction*(board, board[i.value]) shock_test = battle_shock_test(board, board[i.value])
@@ -720,7 +725,7 @@ act overwatch(ctx Board board, frm UnitID moved_unit) -> Overwatch:
             subaction*(board) board.attack
     board.current_state = CurrentStateDescription::none
 
-# core rules movement rules, including the possiblity 
+# core rules movement rules, including the possibility 
 # of advancing and the triggering of overwatches
 act move(ctx Board board, ctx UnitID unit, frm StatModifier additional_movement) -> Move:
     if board[unit.get()].models.size() == 0:
@@ -760,7 +765,7 @@ act fight_step(ctx Board board, frm Bool fight_first_phase) -> FightStep:
                 board.units[target.get()].owned_by_player1 != board.current_decision_maker,
                 board[target.get()].get_shortest_vector_to(board[source.get()]).length() < 2.0
             }
-                board.units[source.get()].consolidate_torward(board.units[target.get()])
+                board.units[source.get()].consolidate_toward(board.units[target.get()])
                 board.attack = attack(board, source, target, true, false)
                 subaction*(board) board.attack
                 board[source.get()].has_fought = true
@@ -796,7 +801,7 @@ act charge(ctx Board board, frm UnitID source, frm UnitID target, Bool can_be_ov
 
     if board[source.get()].models.size() == 0 or board[target.get()].models.size() == 0:
         return 
-    board.current_pair_roll = rerollable_pair_dices_roll(board, board[source.get()].can_reroll_charge(), false, true, board.current_player)
+    board.current_pair_roll = rerollable_pair_dice_roll(board, board[source.get()].can_reroll_charge(), false, true, board.current_player)
     subaction*(board) board.current_pair_roll
     let vector = board[source.get()].get_shortest_vector_to(board[target.get()])
     if vector.length() < float(board.current_pair_roll.result.value + board.current_pair_roll.result2.value):
@@ -881,7 +886,7 @@ act reserve_deployment(ctx Board board, frm Bool current_player) -> ReserveDeplo
 
 # core rules desperate escape 
 act desperate_escape(ctx Board board, frm UnitID id) -> DesperateEscapeTest:
-    if !board[id].battle_socked:
+    if !board[id].battle_shocked:
         return
 
     if board.faction_of_unit(id) == Faction::insidious_infiltrators:
@@ -950,7 +955,7 @@ act movement_phase(ctx Board board) -> MovementPhase:
                 subaction*(board) move = movement(board, id, use_gilded_spear)
 
     board.current_decision_maker = board.current_player 
-    # reserve managment
+    # reserve management
     while true:
         subaction*(board) reserve_deployment = reserve_deployment(board, board.current_player)
         if reserve_deployment.done_deploying:
@@ -1043,7 +1048,7 @@ fun deployment_position_valid(Board board, BoardPosition position, Bool current_
         return position.y >= BOARD_HEIGHT - 5
 
 # the core rules sequence where players
-# alterante deploying units in a valid position 
+# alternate deploying units in a valid position 
 act deploy(ctx Board board) -> Deployment:
     board.current_decision_maker = board.starting_player
     frm passed_players = [false, false]
@@ -1068,7 +1073,7 @@ act deploy(ctx Board board) -> Deployment:
                     board.current_decision_maker = !board.current_decision_maker
         
 
-# a 5 rounds battle, inlcuding deployment. 
+# a 5 rounds battle, including deployment. 
 act battle(ctx Board board) -> Battle:
     subaction*(board) attach_leaders = attach_leaders(board)
     subaction*(board) deploy = deploy(board)
@@ -1115,5 +1120,3 @@ act pick_army(ctx Board board, frm Bool current_player) -> PickFaction:
 
         act pick_vengeful_brethren()
         board.players_faction[int(current_player)] = make_vengeful_brethren(board.reserve_units, current_player)
-
-

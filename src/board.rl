@@ -32,7 +32,7 @@ cls AttackSequenceInfo:
     Bool only_hits_on_6
     Bool reroll_wounds
     Bool reroll1_wounds
-    Bool greater_strenght_wound_protection
+    Bool greater_strength_wound_protection
     Bool fight_on_death
     Dice fight_on_death_roll
     LinearlyDistributedInt<0, 20> target_toughness
@@ -40,8 +40,8 @@ cls AttackSequenceInfo:
     Profile source_profile
     BInt<0, MAX_ROUNDS> current_round
 
-    fun add_letal_hits():
-        self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::letal_hits))
+    fun add_lethal_hits():
+        self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::lethal_hits))
 
     fun add_sustained_hits(Int parameter):
         self.temporary_weapon_abilities.append(weapon_rule(WeaponRuleKind::sustained_hit, parameter))
@@ -262,7 +262,7 @@ cls Board:
             return self.get_objective_controller(22, 9)
         if objective_id == 3:
             return self.get_objective_controller(22, 21)
-        assert(false, "unrechable")
+        assert(false, "unreachable")
         return -1
 
     fun get_objectives_locations() -> Vector<BoardPosition>:

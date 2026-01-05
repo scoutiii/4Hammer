@@ -1,0 +1,195 @@
+{
+  "name": "Rulebook Language",
+  "scopeName": "source.rlc",
+  "patterns": [
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#annotations"
+    },
+    {
+      "include": "#type-declarations"
+    },
+    {
+      "include": "#function-declarations"
+    },
+    {
+      "include": "#enum-members"
+    },
+    {
+      "include": "#constants"
+    },
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#operators"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#types"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.rlc",
+          "match": "#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.rlc",
+          "match": "\"(?:\\\\.|[^\"\\\\])*\"s?"
+        }
+      ]
+    },
+    "annotations": {
+      "patterns": [
+        {
+          "name": "storage.type.annotation.rlc",
+          "match": "@[A-Za-z_][A-Za-z0-9_]*"
+        }
+      ]
+    },
+    "type-declarations": {
+      "patterns": [
+        {
+          "match": "\\b(cls|enum)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.rlc"
+            },
+            "2": {
+              "name": "entity.name.type.rlc"
+            }
+          }
+        },
+        {
+          "match": "\\b(using)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.rlc"
+            },
+            "2": {
+              "name": "entity.name.type.alias.rlc"
+            }
+          }
+        },
+        {
+          "match": "\\b(const)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.rlc"
+            },
+            "2": {
+              "name": "constant.other.rlc"
+            }
+          }
+        }
+      ]
+    },
+    "function-declarations": {
+      "patterns": [
+        {
+          "match": "\\b(fun)\\s*<[^>]+>\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.function.rlc"
+            },
+            "2": {
+              "name": "entity.name.function.rlc"
+            }
+          }
+        },
+        {
+          "match": "\\b(fun|act)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "keyword.declaration.function.rlc"
+            },
+            "2": {
+              "name": "entity.name.function.rlc"
+            }
+          }
+        }
+      ]
+    },
+    "enum-members": {
+      "patterns": [
+        {
+          "match": "\\b([A-Z][A-Za-z0-9_]*)::([A-Za-z_][A-Za-z0-9_]*)",
+          "captures": {
+            "1": {
+              "name": "entity.name.type.rlc"
+            },
+            "2": {
+              "name": "constant.other.enum-member.rlc"
+            }
+          }
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.other.rlc",
+          "match": "\\b[A-Z][A-Z0-9_]+\\b"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.rlc",
+          "match": "\\b(import|using|const|enum|cls|fun|act|frm|ctx|let|if|else|while|return|actions|assert|ref|true|false)\\b"
+        },
+        {
+          "name": "keyword.control.rlc",
+          "match": "\\bsubaction\\*?"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.rlc",
+          "match": "\\b(and|or|not|is|can)\\b"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.float.rlc",
+          "match": "\\b\\d+\\.\\d+\\b"
+        },
+        {
+          "name": "constant.numeric.integer.rlc",
+          "match": "\\b\\d+\\b"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "storage.type.builtin.rlc",
+          "match": "\\b(Int|Float|Bool|String|Byte|Vector|BoundedVector|LinearlyDistributedInt|BInt|Hidden)\\b"
+        },
+        {
+          "name": "entity.name.type.rlc",
+          "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+        }
+      ]
+    }
+  }
+}

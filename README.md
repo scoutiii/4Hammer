@@ -90,7 +90,7 @@ An example of maximizing shooting damage is available [here](./examples/single_s
 rlc-learn examples/single_shooting_maximize.rl -o /tmp/net -i src/ --steps-per-env 1000 --lr 0.00001
 ```
 
-![Example Learning](./imgs/example_leaerning.png)
+![Example Learning](./imgs/example_learning.png)
 
 Attempting to learn from a full game (tested on NVIDIA RTX 4070, Intel Core i7-9700K CPU @ 3.60GHz) yielded modest results from playing a single turn:
 
@@ -182,7 +182,7 @@ if img:
     img.save("/tmp/img.png")
 ```
 
-This example shows that you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves! When the engine detects a connection it sets a fixed zoom level and hides the user GUI as well. Unfortunatelly godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
+This example shows that you can keep a client side copy of the game state, this allows you for example to enumerate the valid moves! When the engine detects a connection it sets a fixed zoom level and hides the user GUI as well. Unfortunately godot does not currently support offscreen rendering, when it will, we will provide a command line way of spawning godot in the right configuration immediately.
 
 `client.stop_rendering`, configures godot to emit 1 frame whenever a command is sent from the network and does not render otherwise.
 
@@ -195,7 +195,7 @@ make run
 
 # shell 2
 pip install google-genai # you will have to set you gemini API key
-python ./examples/llvm_to_engine.py src/full_game.rl
+python ./examples/llm_to_engine.py src/full_game.rl
 ```
 
 ```python
@@ -218,6 +218,4 @@ Full gameplay demonstration available [here](https://www.youtube.com/watch?v=T0T
 ### Contacts
 
 Join us on [Discord](https://discord.gg/saSEj9PAt3) or mail us at massimo.fioravanti@polimi.it
-
-
 

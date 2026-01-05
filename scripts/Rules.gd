@@ -13,7 +13,6 @@ signal on_state_reset
 # Called when the node enters the scene tree for the first time.
 func _ready():
 	_reset()
- # Replace with function body.
 
 func set_state(new_state: RLCGame):
 	library.assign(self.state, new_state)
@@ -196,7 +195,7 @@ func as_indented_str(rlc_object)  -> String:
 	assert(rlc_object != null)
 	return RLCLib.convert_string(library.to_indented_lines(library.to_string(rlc_object)))
 
-func choise_is_random() -> bool:
+func choice_is_random() -> bool:
 	return library.get_current_player(state) == -1
 
 func get_current_select_model_action():

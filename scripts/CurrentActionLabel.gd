@@ -16,4 +16,4 @@ func on_state_change():
 	elif GlobalRules.all_valid_actions_are_of_same_type():
 		text = scores + " - " + GlobalRules.strip_symbols(GlobalRules.valid_actions[0].unwrap().get_class().substr(7))
 	else:
-		text = scores + " - Multiple choise"
+		text = scores + " - Multiple choice"
